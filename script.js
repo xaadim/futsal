@@ -1,13 +1,13 @@
-const TM={jaune:'Jaune',orange:'Orange',vert:'Vert'},ALL=['jaune','orange','vert'];
+const TM={jaune:'Jaune',orange:'Orange',vert:'Vert',bleu:'Bleu'},ALL=['jaune','orange','vert','bleu'],MAXM=12;
 const $=s=>document.querySelector(s);
 const SB_URL='https://fuaihkklnygbbiketvjb.supabase.co';
 const SB_KEY='sb_publishable_gpkEUB2YbT1Q6jGO3AoUPQ_EpH6CpZQ';
 function load(){try{return JSON.parse(localStorage.getItem('futsal-v1'))}catch(e){return null}}
 function save(){try{localStorage.setItem('futsal-v1',JSON.stringify(S))}catch(e){}}
-let S=Object.assign({teams:[...ALL],dur:390,cur:{a:'vert',b:'orange',sa:0,sb:0},hist:[],pending:[]},load()||{});
+let S=Object.assign({teams:['jaune','orange','vert'],dur:390,cur:{a:'vert',b:'orange',sa:0,sb:0},hist:[],pending:[]},load()||{});
 let T,iv,wl,YR,R=[],M=[],lastJ='',busy=false,ADM='';
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
-const dt=m=>m.date||today(),sg=v=>(v>0?'+':'')+v;
+const dt=m=>m.date||today(),nToday=()=>M.filter(m=>dt(m)===today()).length,sg=v=>(v>0?'+':'')+v;
 const fmt=s=>{s=Math.ceil(s);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
 
 /* ---- son ---- */
@@ -38,7 +38,9 @@ function drawT(){const d=S.dur,c=$('#tc'),hb=T.run&&Date.now()<T.hb;
   $('#ph').textContent=T.done?'TEMPS ÉCOULÉ !':hb?'🔔 MI-TEMPS':!T.started?'Prêt, mi-temps à '+fmt(d/2):!T.run?'En pause':T.half?'2e mi-temps':'1re mi-temps';
   c.classList.toggle('end',T.done);c.classList.toggle('hb',hb);
   const g=$('#go');g.textContent=T.done?'Terminé':T.run?'⏸ Pause':T.started?'▶ Reprendre':'▶ Démarrer';g.disabled=T.done;
-  $('#val').classList.toggle('pulse',T.done)}
+  $('#val').classList.toggle('pulse',T.done);
+  const n=nToday(),full=n>=MAXM,v=$('#val');if(full)g.disabled=true;v.disabled=full;
+  if(!v.dataset.arm)v.textContent=full?'Soirée terminée ('+MAXM+' matchs)':'✓ Valider le match ('+(n+1)+'/'+MAXM+')'}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){lock();if(T.run)tick();pull()}});
 
 /* ---- helpers ---- */
@@ -53,9 +55,11 @@ function fix(){const c=S.cur;let a=c.a,b=c.b;
 const ch=()=>{save();renderBoard()};
 
 /* ---- match ---- */
-function val(){const c=S.cur;const m={date:today(),ts:Date.now(),a:c.a,b:c.b,sa:c.sa,sb:c.sb};
+function val(){if(nToday()>=MAXM){toast('Limite de '+MAXM+' matchs atteinte pour ce soir');return}
+  const c=S.cur;const m={date:today(),ts:Date.now(),a:c.a,b:c.b,sa:c.sa,sb:c.sb};
   S.pending.push(m);save();rebuild();pull();
-  const stay=c.sa>c.sb?c.a:c.b,out=stay===c.a?c.b:c.a,nx=S.teams.find(t=>t!==c.a&&t!==c.b);
+  const stay=c.sa>c.sb?c.a:c.b,out=stay===c.a?c.b:c.a,td=M.filter(x=>dt(x)===today()),last=t=>{for(let i=td.length-1;i>=0;i--)if(td[i].a===t||td[i].b===t)return i;return -1},
+    nx=S.teams.filter(t=>t!==c.a&&t!==c.b).sort((x,y)=>last(x)-last(y))[0];
   if(nx){S.cur={a:stay,b:nx,sa:0,sb:0};toast(TM[stay]+' reste, '+TM[nx]+' entre')}
   else{S.cur={a:c.a,b:c.b,sa:0,sb:0};toast('Match enregistré')}
   save();rst();renderAll()}
@@ -76,14 +80,14 @@ function renderHist(){const H=$('#hist'),E=M.map((m,i)=>[m,i]).filter(([m])=>dt(
 function renderSeason(){const ys=[...new Set(M.map(m=>dt(m).slice(0,4)).concat(today().slice(0,4)))].sort().reverse();
   if(!YR||!ys.includes(YR))YR=ys[0];
   $('#yr').innerHTML=ys.map(y=>`<option${y===YR?' selected':''}>${y}</option>`).join('');
-  const L=M.filter(m=>dt(m).startsWith(YR)),by={},W={jaune:0,orange:0,vert:0};
+  const L=M.filter(m=>dt(m).startsWith(YR)),by={},W=Object.fromEntries(ALL.map(t=>[t,0]));
   L.forEach(m=>(by[dt(m)]=by[dt(m)]||[]).push(m));
   const evs=Object.keys(by).sort().reverse().map(d=>({d,r:calc(by[d],ALL).filter(x=>x.j)}));
   evs.forEach(e=>{if(e.r.length)W[e.r[0].t]++});
-  $('#sea').innerHTML=L.length?'<table class="cp"><tr><th></th><th>Équipe</th><th>J</th><th>V-N-D</th><th>Diff</th><th>Pts</th><th>Moy</th><th>🏅</th></tr>'+calc(L,ALL).map((x,i)=>`<tr class="t-${x.t}"><td class="rk">${i+1}</td><td><i class="dot"></i>${TM[x.t]}</td><td>${x.j}</td><td>${x.v}-${x.n}-${x.l}</td><td>${sg(x.d)}</td><td class="pt">${x.p}</td><td>${x.j?(x.p/x.j).toFixed(2):'–'}</td><td>${W[x.t]}</td></tr>`).join('')+`</table><p class="note">${L.length} matchs sur ${evs.length} soirées. Moy : points par match. 🏅 : soirées gagnées.</p>`:`<div class="empty">Aucun match en ${YR}.</div>`;
+  $('#sea').innerHTML=L.length?'<table class="cp"><tr><th></th><th>Équipe</th><th>J</th><th>V-N-D</th><th>Diff</th><th>Pts</th><th>Moy</th><th>🏅</th></tr>'+calc(L,ALL).filter(x=>x.j||S.teams.includes(x.t)).map((x,i)=>`<tr class="t-${x.t}"><td class="rk">${i+1}</td><td><i class="dot"></i>${TM[x.t]}</td><td>${x.j}</td><td>${x.v}-${x.n}-${x.l}</td><td>${sg(x.d)}</td><td class="pt">${x.p}</td><td>${x.j?(x.p/x.j).toFixed(2):'–'}</td><td>${W[x.t]}</td></tr>`).join('')+`</table><p class="note">${L.length} matchs sur ${evs.length} soirées. Moy : points par match. 🏅 : soirées gagnées.</p>`:`<div class="empty">Aucun match en ${YR}.</div>`;
   $('#evs').innerHTML=evs.length?evs.map(e=>`<div class="ev"><b>${new Date(e.d+'T12:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}</b><span class="w t-${e.r[0].t}"><i class="dot"></i>${TM[e.r[0].t]}</span><small>${e.r.map(x=>TM[x.t]+' '+x.p).join(', ')}</small></div>`).join(''):''}
 const sb=(p,o={})=>fetch(SB_URL+'/rest/v1/'+p,{...o,headers:{apikey:SB_KEY,...(SB_KEY.startsWith('eyJ')?{Authorization:'Bearer '+SB_KEY}:{}),'Content-Type':'application/json',Prefer:'return=minimal'}}).then(async r=>{if(!r.ok)throw new Error(r.status);const t=await r.text();return t?JSON.parse(t):null});
-function rebuild(){M=R.concat(S.pending);renderRank();renderHist();renderSeason()}
+function rebuild(){M=R.concat(S.pending);renderRank();renderHist();renderSeason();if(T)drawT()}
 async function pull(){if(busy||SB_URL.startsWith('COLLER')||SB_URL.startsWith('TON_URL'))return;busy=true;
   try{let fl=false;for(const m of [...S.pending]){await sb('matches',{method:'POST',body:JSON.stringify(m)});S.pending=S.pending.filter(x=>x!==m);save();fl=true}
     const n=await sb('matches?select=*&order=ts.asc'),j=JSON.stringify(n);

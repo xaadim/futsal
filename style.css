@@ -19,6 +19,7 @@ button:active{transform:scale(.96)}
 button:disabled{opacity:.45}
 button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--ac);outline-offset:2px}
 .t-jaune{--tc:#facc15;--tt:#2a2100}.t-orange{--tc:#fb923c;--tt:#2e1300}.t-vert{--tc:#22c55e;--tt:#032a10}
+.t-bleu{--tc:#60a5fa;--tt:#04193d}
 .dot{display:inline-block;width:12px;height:12px;border-radius:50%;background:var(--tc);margin-right:8px}
 /* chrono */
 #tc{text-align:center;transition:background .2s,border-color .2s}
