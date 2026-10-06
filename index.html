@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Futsal Aytré</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+<header><div class="brand"><svg class="logo" viewBox="0 0 48 48" role="img" aria-label="Ballon de futsal"><circle cx="24" cy="24" r="22" fill="#fff" stroke="#10141f" stroke-width="3"/><path d="M24 15l8 6-3 9H19l-3-9z" fill="#10141f"/><path d="M24 15V4M32 21l11-3M29 30l7 9M19 30l-7 9M16 21L5 18" stroke="#10141f" stroke-width="2.5" stroke-linecap="round" fill="none"/></svg><h1>Futsal Aytré</h1></div><div id="date"></div></header>
+
+<section id="p-match" class="pane">
+  <div class="card" id="tc">
+    <div id="ph"></div>
+    <div id="time">6:30</div>
+    <div class="bar"><i id="prog"></i><b></b></div>
+    <div class="row"><button class="go" id="go">▶ Démarrer</button><button id="rst" aria-label="Remettre à zéro">↺</button></div>
+    <details>
+      <summary>Réglages</summary>
+      <div class="set"><label>Durée</label><input id="mm" type="number" min="0" max="60" inputmode="numeric" aria-label="Minutes"><label>min</label><input id="ss" type="number" min="0" max="59" inputmode="numeric" aria-label="Secondes"><label>s</label></div>
+      <div class="set"><label>Équipes</label><span id="chips"></span></div>
+      <div class="set"><label>Son</label><button id="t1">Bip mi-temps</button><button id="t2">Buzz de fin</button></div>
+    </details>
+  </div>
+  <div id="board"></div>
+  <button class="val" id="val">✓ Valider le match</button>
+</section>
+
+<section id="p-rank" class="pane" hidden>
+  <div class="card"><table id="tb"></table></div>
+  <p class="note">Soirée du jour. Victoire 3 pts, nul 1 pt. Départage : différence de buts, puis buts marqués.</p>
+</section>
+
+<section id="p-hist" class="pane" hidden>
+  <div class="card" id="hist"></div>
+  <p class="note">Les matchs sont conservés pour la saison. Seuls ceux d'aujourd'hui s'affichent ici.</p>
+</section>
+<section id="p-season" class="pane" hidden>
+  <div class="card bar2"><select id="yr" aria-label="Année"></select><span id="sync" class="note"></span></div>
+  <div class="card" id="sea"></div>
+  <div class="card" id="evs"></div>
+</section>
+</main>
+
+<nav>
+  <button data-tab="match" class="on"><span>⏱</span>Match</button>
+  <button data-tab="rank"><span>🏆</span>Classement</button>
+  <button data-tab="hist"><span>📋</span>Matchs</button>
+  <button data-tab="season"><span>📅</span>Saison</button>
+</nav>
+<div id="toast" role="status"></div>
+
+<script src="script.js"></script>
+</body>
+</html>
