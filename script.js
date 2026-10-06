@@ -1,12 +1,7 @@
 const TM={jaune:'Jaune',orange:'Orange',vert:'Vert'},ALL=['jaune','orange','vert'];
 const $=s=>document.querySelector(s);
-
-// CLÉS SUPABASE RETIRÉES POUR LA SÉCURITÉ DU DÉPÔT. 
-// A lier via des variables d'environnement si tu utilises un bundler, 
-// ou à renseigner avec prudence si tes RLS Supabase sont bien paramétrées.
-const SB_URL = 'TON_URL_SUPABASE_ICI';
-const SB_KEY = 'TA_CLE_PUBLIQUE_SUPABASE_ICI';
-
+const SB_URL='https://fuaihkklnygbbiketvjb.supabase.co';
+const SB_KEY='sb_publishable_gpkEUB2YbT1Q6jGO3AoUPQ_EpH6CpZQ';
 function load(){try{return JSON.parse(localStorage.getItem('futsal-v1'))}catch(e){return null}}
 function save(){try{localStorage.setItem('futsal-v1',JSON.stringify(S))}catch(e){}}
 let S=Object.assign({teams:[...ALL],dur:390,cur:{a:'vert',b:'orange',sa:0,sb:0},hist:[],pending:[]},load()||{});
