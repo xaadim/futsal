@@ -110,7 +110,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)r
 document.addEventListener('change',e=>{const el=e.target,s=el.dataset.sel;
   if(el.id==='yr'){YR=el.value;renderSeason()}
   else if(s){const o=s==='a'?'b':'a';if(el.value===S.cur[o])S.cur[o]=S.cur[s];S.cur[s]=el.value;ch()}
-  else if(el.id==='mm'||el.id==='ss'){S.dur = Math.max(10, ((+$('#mm').val() || 0) * 60) + (+$('#ss').val() || 0));save();if(!T.started)rst();else drawT()});
+  else if(el.id==='mm'||el.id==='ss'){S.dur = Math.max(10, ((+$('#mm').val() || 0) * 60) + (+$('#ss').val() || 0));save();if(!T.started)rst();else drawT()});}
 
 /* ---- init ---- */
 $('#date').textContent=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
