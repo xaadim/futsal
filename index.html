@@ -13,20 +13,23 @@
 <header><div class="brand"><svg class="logo" viewBox="0 0 48 48" role="img" aria-label="Ballon de futsal"><circle cx="24" cy="24" r="22" fill="#fff" stroke="#10141f" stroke-width="3"/><path d="M24 15l8 6-3 9H19l-3-9z" fill="#10141f"/><path d="M24 15V4M32 21l11-3M29 30l7 9M19 30l-7 9M16 21L5 18" stroke="#10141f" stroke-width="2.5" stroke-linecap="round" fill="none"/></svg><h1>Futsal Aytré</h1></div><div id="date"></div></header>
 
 <section id="p-match" class="pane">
+<div id="setup"></div>
+<div id="live" hidden>
+  <div id="ban" class="ban"></div>
   <div class="card" id="tc">
     <div id="ph"></div>
     <div id="time">6:30</div>
     <div class="bar"><i id="prog"></i><b></b></div>
-    <div class="row"><button class="go" id="go">▶ Démarrer</button><button id="rst" aria-label="Remettre à zéro">↺</button></div>
-    <details>
+    <div class="row ctl"><button class="go" id="go">▶ Démarrer</button><button id="rst" aria-label="Remettre à zéro">↺</button></div>
+    <details class="ctl">
       <summary>Réglages</summary>
       <div class="set"><label>Durée</label><input id="mm" type="number" min="0" max="60" inputmode="numeric" aria-label="Minutes"><label>min</label><input id="ss" type="number" min="0" max="59" inputmode="numeric" aria-label="Secondes"><label>s</label></div>
-      <div class="set"><label>Équipes</label><span id="chips"></span></div>
       <div class="set"><label>Son</label><button id="t1">Bip mi-temps</button><button id="t2">Buzz de fin</button></div>
     </details>
   </div>
   <div id="board"></div>
-  <button class="val" id="val">✓ Valider le match</button>
+  <button class="val ctl" id="val">✓ Valider le match</button>
+</div>
 </section>
 
 <section id="p-rank" class="pane" hidden>
@@ -41,6 +44,7 @@
 <section id="p-season" class="pane" hidden>
   <div class="card bar2"><select id="yr" aria-label="Année"></select><span id="sync" class="note"></span></div>
   <div class="card" id="sea"></div>
+  <div class="card" id="pls"></div>
   <div class="card" id="evs"></div>
 </section>
 </main>
