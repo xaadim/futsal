@@ -98,3 +98,4 @@ body.view .ctl{display:none!important}
 select:disabled{opacity:1}
 
 #host{font:600 16px system-ui,sans-serif;text-align:left;text-align-last:left;-webkit-appearance:menulist;appearance:auto;background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:12px;padding:10px 12px;width:auto;flex:1;min-width:0}
+.pc.del{border-color:var(--danger);border-style:dashed}
