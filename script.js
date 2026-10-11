@@ -214,5 +214,6 @@ document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='np')a
 $('#date').textContent=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
 $('#mm').value=Math.floor(S.dur/60);$('#ss').value=S.dur%60;
 $('#sync').textContent='Connexion…';
+{const v=$('#ver'),y=$('#cy');if(v)v.textContent='v'+(window.APP_VERSION||'');if(y)y.textContent=new Date().getFullYear()}
 lock();setMode();restoreT();refresh();
 pull();setInterval(pull,3000);setInterval(viewSync,250);setInterval(pushLive,1500);
