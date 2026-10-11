@@ -102,8 +102,7 @@ async function addPlayer(){const i=$('#np'),n=i.value.trim().slice(0,30);if(!n)r
   let p=PL.find(x=>x.toLowerCase()===n.toLowerCase());
   if(!p){p=n;PL.push(p);PL.sort((a,b)=>a.localeCompare(b,'fr'));
     try{await sb('players',{method:'POST',body:JSON.stringify({name:p})})}catch(e){if(e.status!==409)toast('Joueur non enregistré (réseau ?)')}}
-  const as=S.setup.assign,cnt=t=>Object.values(as).filter(x=>x===t).length;
-  as[p]=S.setup.teams.slice().sort((x,y)=>cnt(x)-cnt(y))[0];save();lastSetup='';renderSetup()}
+  lastSetup='';renderSetup()}
 
 /* ---- match ---- */
 function val(){if(MODE!=='host')return;if(nSess()>=SESS.max){toast('Limite de '+SESS.max+' matchs atteinte');return}
