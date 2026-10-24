@@ -35,7 +35,7 @@ Application web pour gérer les matchs d'une soirée futsal : chronomètre, scor
 ## Architecture
 
 - Site statique servi par un Worker Cloudflare ; API dans `src/worker.js` (`/api/*`) ; base **Cloudflare D1** (`migrations/`).
-- Un seul Worker (`futsal`) et deux bases D1 : **prod** (branche de production) et **dev** (autres branches, URL de prévisualisation).
+- Un seul Worker (`futsal`) et deux bases D1 : **prod** (branche de production) et **dev** (previews des autres branches).
 - Aucun identifiant de base dans le dépôt : `scripts/deploy.mjs` lit les variables de build.
 
 ## Réglages Cloudflare (Workers & Pages > futsal > Settings > Build)
@@ -48,15 +48,16 @@ Variables and secrets :
 | `D1_DATABASE_ID_DEV` | ID de la base **dev** |
 | `SETUP_KEY` | clé de votre choix, utilisée une seule fois pour créer l'admin |
 
-Commandes :
+Commandes (Settings > Build) :
 
 | Champ | Valeur |
 |---|---|
-| Deploy command | `node scripts/deploy.mjs` |
-| Non-production branch deploy command | `node scripts/deploy.mjs preview` |
+| Build command | *(vide)* |
+| Deploy command (production) | `node scripts/deploy.mjs` |
+| Deploy command (previews / branches hors production) | `node scripts/deploy.mjs preview` |
 
-Branche de production : `main`. Les autres branches (par exemple `develop`) sont déployées en prévisualisation, reliées à la base dev.
-URL de test : `dev-futsal.<votre-sous-domaine>.workers.dev` (onglet Previews du Worker).
+Branche de production : `main`. Les autres branches (par exemple `develop`) créent une **Preview** (Worker Previews) liée à la base dev.
+URL de test : `<nom-de-la-branche>-futsal.<votre-sous-domaine>.workers.dev` (onglet Previews du Worker).
 
 ## Mise en ligne
 
