@@ -11,9 +11,15 @@
 <body>
 <div id="auth"></div>
 <main>
-<header><div class="brand"><svg class="logo" viewBox="0 0 48 48" role="img" aria-label="Ballon de futsal"><circle cx="24" cy="24" r="22" fill="#fff" stroke="#10141f" stroke-width="3"/><path d="M24 15l8 6-3 9H19l-3-9z" fill="#10141f"/><path d="M24 15V4M32 21l11-3M29 30l7 9M19 30l-7 9M16 21L5 18" stroke="#10141f" stroke-width="2.5" stroke-linecap="round" fill="none"/></svg><h1>Futsal Aytré</h1></div><div id="date"></div></header>
+<header><div class="brand"><svg class="logo" viewBox="0 0 48 48" role="img" aria-label="Ballon de futsal"><circle cx="24" cy="24" r="22" fill="#fff" stroke="#10141f" stroke-width="3"/><path d="M24 15l8 6-3 9H19l-3-9z" fill="#10141f"/><path d="M24 15V4M32 21l11-3M29 30l7 9M19 30l-7 9M16 21L5 18" stroke="#10141f" stroke-width="2.5" stroke-linecap="round" fill="none"/></svg><h1>Futsal Aytré</h1></div><div class="header-meta"><div id="date"></div><div id="who"></div></div></header>
 
-<section id="p-match" class="pane">
+<section id="p-session" class="pane">
+<div class="session-switch" role="group" aria-label="Vues de la session">
+  <button id="session-tab-match" class="on" aria-pressed="true" aria-controls="session-match" data-session-view="match"><span aria-hidden="true">⚽</span>Match</button>
+  <button id="session-tab-rank" aria-pressed="false" aria-controls="session-rank" data-session-view="rank"><span aria-hidden="true">🏆</span>Classement</button>
+  <button id="session-tab-hist" aria-pressed="false" aria-controls="session-hist" data-session-view="hist"><span aria-hidden="true">📋</span>Matchs</button>
+</div>
+<div id="session-match" class="session-view" role="region" aria-label="Match">
 <div id="setup"></div>
 <div id="live" hidden>
   <div id="ban" class="ban"></div>
@@ -31,16 +37,17 @@
   <div id="board"></div>
   <button class="val ctl" id="val">✓ Valider le match</button>
 </div>
-</section>
+</div>
 
-<section id="p-rank" class="pane" hidden>
+<div id="session-rank" class="session-view" role="region" aria-label="Classement" hidden>
   <div class="card"><table id="tb"></table></div>
   <p class="note">Soirée du jour. Victoire 3 pts, nul 1 pt. Départage : différence de buts, puis buts marqués.</p>
-</section>
+</div>
 
-<section id="p-hist" class="pane" hidden>
+<div id="session-hist" class="session-view" role="region" aria-label="Matchs" hidden>
   <div class="card" id="hist"></div>
   <p class="note">Les matchs sont conservés pour la saison. Seuls ceux d'aujourd'hui s'affichent ici.</p>
+</div>
 </section>
 <section id="p-season" class="pane" hidden>
   <div class="card bar2"><select id="yr" aria-label="Année"></select><span id="sync" class="note"></span></div>
@@ -51,13 +58,11 @@
 </section>
 <section id="p-me" class="pane" hidden><div class="card" id="me"></div></section>
 <section id="p-admin" class="pane" hidden><div id="adm"></div></section>
-<footer><span>Futsal Aytré <span id="ver"></span></span><span>© <span id="cy"></span> <a href="https://xaadim.dev/" target="_blank" rel="noopener">xaadim</a></span><span id="who"></span></footer>
+<footer><span>Futsal Aytré <span id="ver"></span></span><span>© <span id="cy"></span> <a href="https://xaadim.dev/" target="_blank" rel="noopener">xaadim</a></span></footer>
 </main>
 
 <nav>
-  <button data-tab="match" class="on"><span>⏱</span>Match</button>
-  <button data-tab="rank"><span>🏆</span>Classement</button>
-  <button data-tab="hist"><span>📋</span>Matchs</button>
+  <button data-tab="session" class="on"><span>⏱</span>Session</button>
   <button data-tab="season"><span>📅</span>Saison</button>
   <button data-tab="me"><span>⭐</span>Mes stats</button>
   <button data-tab="admin" id="tabAdmin" hidden><span>👤</span>Joueurs</button>

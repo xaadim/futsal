@@ -10,7 +10,7 @@ if(!S.setup||!S.setup.teams)S.setup={teams:['jaune','orange','vert'],assign:{}};
 if(S.setup.teams.length>3)S.setup.teams=S.setup.teams.slice(0,3);
 if(!S.cur.goals)S.cur.goals=[];
 let T,iv,wl,YR,R=[],M=[],SA=[],PL=[],USERS=[],LOADED=false,MODE='none',prev='',VER=0,busy=false,lastLive='',pushing=false,dirty=false,lastBoard='',lastBan='',lastSetup='',lastAdm='',NEWCODE=null,PICK=null,IMPORTED=null;
-let ME=S.me,SESS=(ME&&S.cache&&S.cache.host_user===ME.id)?S.cache:null,TEAMS=S.setup.teams;
+let ME=S.me,SESS=(ME&&S.cache&&S.cache.host_user===ME.id)?S.cache:null,TEAMS=S.setup.teams,CAN_IMPORT_SUPABASE=false;
 const isHost=()=>!!(SESS&&ME&&SESS.host_user===ME.id),isAdmin=()=>!!(ME&&ME.role==='admin');
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 const dt=m=>m.date||today(),sg=v=>(v>0?'+':'')+v;
@@ -85,6 +85,7 @@ function setMode(){TEAMS=SESS&&SESS.teams?ALL.filter(t=>SESS.teams[t]):S.setup.t
   document.body.classList.toggle('anon',!ME);document.body.classList.toggle('view',MODE==='view');
   $('#setup').hidden=MODE!=='none';$('#live').hidden=MODE==='none';
   const ta=$('#tabAdmin');if(ta)ta.hidden=!isAdmin();
+  const pa=$('#p-admin');if(pa&&!isAdmin())pa.hidden=true;
   if(MODE!=='host')closePick();
   if(MODE==='host')fix()}
 function refresh(){setMode();renderAuth();renderWho();if(MODE!==prev){prev=MODE;lastBoard='';renderBoard();if(MODE==='host')drawT()}rebuild();renderSetup();renderAdmin();viewSync()}
@@ -116,8 +117,8 @@ async function gen(){const as=S.setup.assign,names=PL.filter(p=>as[p]),tm=S.setu
 async function login(){const c=($('#code').value||'').trim();if(!c)return;
   try{const r=await post('login',{code:c});ME=r.me;S.me=ME;save();VER=0;await pull(true)}
   catch(e){$('#autherr').textContent=e.status===429?'Trop d\'essais. Réessayez dans 10 minutes.':e.status===401?'Code invalide.':'Connexion impossible, réessayez.'}}
-function boot(){post('bootstrap',{key:$('#sk').value,name:$('#bn').value||'Admin'}).then(r=>{$('#code').value=r.code;$('#autherr').innerHTML='Votre code : <b>'+r.code+'</b>. Notez-le puis touchez « Entrer ».';$('#firstrun').hidden=true}).catch(e=>{$('#autherr').textContent=e.status===403?'Clé d\'installation incorrecte.':e.status===409?'Déjà installé : utilisez votre code.':'Installation impossible.'})}
-function doImport(){post('import-supabase').then(r=>{IMPORTED=r;lastAdm='';pull(true);toast('Historique repris')}).catch(e=>toast(e.status===409?'Import impossible : la base contient déjà des matchs':e.status===502?'Supabase injoignable':'Import impossible'))}
+function boot(){post('bootstrap',{key:$('#sk').value,name:$('#bn').value||'Admin'}).then(r=>{$('#code').value=r.code;$('#autherr').innerHTML='Votre code : <b>'+r.code+'</b>. Notez-le puis touchez « Entrer ».';$('#firstrun').hidden=true;$('#logincard').hidden=false}).catch(e=>{$('#setuperr').textContent=e.status===403?'Clé d\'installation incorrecte.':e.status===409?'Déjà installé : rechargez la page.':'Installation impossible.'})}
+function doImport(){post('import-supabase').then(r=>{IMPORTED=r;CAN_IMPORT_SUPABASE=false;lastAdm='';pull(true);toast('Historique repris')}).catch(e=>toast(e.status===409?'Import impossible : la base contient déjà des matchs':e.status===502?'Supabase injoignable':'Import impossible'))}
 async function logout(){try{await post('logout')}catch(e){}ME=null;S.me=null;S.cache=null;S.timer=null;SESS=null;save();VER=0;LOADED=false;lastSetup='';lastAdm='';refresh()}
 function addUser(){const name=($('#nn').value||'').trim();if(!name)return;
   post('users',{name,level:+$('#nl').value,role:$('#na').checked?'admin':'player'}).then(r=>{NEWCODE={name:r.name,code:r.code};lastAdm='';pull(true)}).catch(e=>toast(e.status===409?'Ce nom existe déjà':'Création impossible'))}
@@ -143,9 +144,9 @@ function renderBan(){const b=$('#ban');let h='';
     h=MODE==='host'?`<span>Session en cours · ${i}</span><button class="sm" id="endS">Terminer</button>`:`<span>🔒 Session de <b>${esc(SESS.host_name||'?')}</b> · ${i}</span>${isAdmin()?'<button class="sm" id="unl">Débloquer</button>':''}`}
   if(h!==lastBan){lastBan=h;b.innerHTML=h}}
 function renderAuth(){const el=$('#auth');if(ME){el.innerHTML='';return}
-  if(!el.firstChild){el.innerHTML=`<div class="card"><h2>Futsal Aytré</h2><p class="note" style="margin:0 0 12px">Entrez votre code d'activation personnel. Il n'est demandé qu'une seule fois sur ce téléphone.</p><div class="set"><input class="in" id="code" type="text" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="XXXXX-XXXXX" maxlength="14"><button id="login">Entrer</button></div><p class="note" id="autherr" role="alert"></p><p class="note">Pas de code ? Demandez-le à un admin du groupe.</p></div><div class="card" id="firstrun" hidden><h2>Première installation</h2><p class="note" style="margin:0 0 10px">Créez le compte administrateur. La clé d'installation est la valeur de SETUP_KEY dans Cloudflare.</p><div class="set"><input class="in" id="sk" type="password" placeholder="Clé d'installation" autocomplete="off"></div><div class="set"><input class="in" id="bn" type="text" maxlength="30" placeholder="Votre prénom"><button id="boot">Créer</button></div></div>`;
-    api('setup').then(r=>{const f=$('#firstrun');if(f&&r.needsAdmin)f.hidden=false}).catch(()=>{})}}
-function renderWho(){const w=$('#who');if(w)w.innerHTML=ME?`Connecté : ${esc(ME.name)}${isAdmin()?' (admin)':''} <button class="sm" id="logout">Se déconnecter</button>`:''}
+  if(!el.firstChild){el.innerHTML=`<div class="card empty" id="authwait">Vérification de l'installation…</div><div class="card" id="logincard" hidden><h2>Futsal Aytré</h2><p class="note" style="margin:0 0 12px">Entrez votre code d'activation personnel. Il n'est demandé qu'une seule fois sur ce téléphone.</p><div class="set"><input class="in" id="code" type="text" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="XXXXX-XXXXX" maxlength="14"><button id="login">Entrer</button></div><p class="note" id="autherr" role="alert"></p><p class="note">Pas de code ? Demandez-le à un admin du groupe.</p></div><div class="card" id="firstrun" hidden><h2>Première installation</h2><p class="note" style="margin:0 0 10px">Créez le compte administrateur. La clé d'installation est la valeur de SETUP_KEY dans Cloudflare.</p><div class="set"><input class="in" id="sk" type="password" placeholder="Clé d'installation" autocomplete="off"></div><div class="set"><input class="in" id="bn" type="text" maxlength="30" placeholder="Votre prénom"><button id="boot">Créer</button></div><p class="note" id="setuperr" role="alert"></p></div>`;
+    api('setup').then(r=>{const w=$('#authwait'),l=$('#logincard'),f=$('#firstrun');if(w)w.hidden=true;if(l)l.hidden=!!r.needsAdmin;if(f)f.hidden=!r.needsAdmin}).catch(()=>{const w=$('#authwait');if(w)w.textContent='Vérification impossible. Rechargez la page pour réessayer.'})}}
+function renderWho(){const w=$('#who');if(w)w.innerHTML=ME?`<span>Connecté : <b>${esc(ME.name)}</b>${isAdmin()?' (admin)':''}</span><button class="sm" id="logout">Se déconnecter</button>`:''}
 function renderSetup(){const el=$('#setup');if(MODE!=='none')return;let h='';
   if(ME&&!LOADED)h='<div class="card empty">Connexion…</div>';
   else if(ME){const tm=S.setup.teams,as=S.setup.assign,pres=PL.filter(p=>as[p]).length;
@@ -157,13 +158,14 @@ function renderSetup(){const el=$('#setup');if(MODE!=='none')return;let h='';
 ${tm.map(t=>{const n=PL.filter(p=>as[p]===t);return `<div class="ro t-${t}"><b>${TM[t]}</b> (${n.length}) ${n.map(esc).join(', ')}</div>`}).join('')}</div>
 <button class="val" id="start">▶ Démarrer la session</button>`}
   if(h!==lastSetup){lastSetup=h;el.innerHTML=h}}
-function renderAdmin(){const el=$('#adm');if(!el)return;let h='';
+function renderAdmin(){const el=$('#adm');if(!el)return;if(!isAdmin()){el.replaceChildren();return}let h='';
   if(isAdmin()){
     const nc=NEWCODE?`<div class="card code"><div>Code de <b>${esc(NEWCODE.name||'')}</b></div><div class="big">${esc(NEWCODE.code)}</div><p class="note">À lui transmettre maintenant. Il ne sera plus affiché.</p><div class="set"><button class="sm" id="cpcode">Copier</button><button class="sm" id="hidecode">J'ai noté le code</button></div></div>`:'';
     const lv=(n)=>[1,2,3,4,5].map(x=>`<option${x===n?' selected':''}>${x}</option>`).join('');
     const imp=IMPORTED?`<div class="card code"><h2>Codes des joueurs repris</h2><p class="note">${IMPORTED.stats.matchs} matchs repris. À transmettre maintenant : ces codes ne seront plus affichés.</p>${IMPORTED.codes.map(c=>`<div class="ur"><b>${esc(c.name)}</b><span class="big" style="font-size:26px">${esc(c.code)}</span></div>`).join('')}<div class="set"><button class="sm" id="cpall">Copier la liste</button><button class="sm" id="hideimp">J'ai noté les codes</button></div></div>`:'';
+    const importCard=CAN_IMPORT_SUPABASE?`<div class="card"><h2>Historique Supabase</h2><p class="note" style="margin:0 0 10px">Reprend les joueurs, sessions et matchs de l'ancienne base. Possible une seule fois, sur une base sans match.</p><button id="imp">Importer l'historique Supabase</button></div>`:'';
     h=nc+imp+`<div class="card"><h2>Nouveau joueur</h2><div class="set"><input class="in" id="nn" type="text" maxlength="30" placeholder="Prénom"></div><div class="set"><label>Niveau</label><select class="sel" id="nl">${lv(3)}</select><label><input type="checkbox" id="na"> Admin</label><button id="addu">Créer</button></div><p class="note">Niveau de 1 (débutant) à 5 (très fort). Un code d'activation unique est généré pour ce joueur.</p></div>
-<div class="card"><h2>Historique Supabase</h2><p class="note" style="margin:0 0 10px">Reprend les joueurs, sessions et matchs de l'ancienne base. Possible une seule fois, sur une base sans match.</p><button id="imp">Importer l'historique Supabase</button></div>
+${importCard}
 <div class="card"><h2>Joueurs (${USERS.length})</h2>${USERS.map(u=>`<div class="ur"><b>${esc(u.name)}${u.role==='admin'?' <span class="badge">admin</span>':''}</b><label>Niveau <select class="sel" data-lv="${u.id}">${lv(u.level)}</select></label><button class="sm" data-nc="${u.id}">Nouveau code</button>${u.id===ME.id?'':`<button class="sm" data-adm="${u.id}">${u.role==='admin'?'Retirer admin':'Passer admin'}</button><button class="sm" data-du="${u.id}" aria-label="Supprimer ${esc(u.name)}">✕</button>`}</div>`).join('')||'<div class="empty">Aucun joueur.</div>'}</div>`}
   if(h!==lastAdm){lastAdm=h;el.innerHTML=h}}
 function calc(L,teams){const r={};teams.forEach(t=>r[t]={t,j:0,v:0,n:0,l:0,gf:0,ga:0,d:0,p:0});
@@ -214,24 +216,34 @@ const api=(p,o={})=>fetch('/api/'+p,{credentials:'same-origin',...o,headers:{'Co
 const post=(p,b)=>api(p,{method:'POST',body:JSON.stringify(b||{})});
 const patch=(p,b)=>api(p,{method:'PATCH',body:JSON.stringify(b||{})});
 function rebuild(){M=R.concat(S.pending);renderRank();renderHist();renderSeason();renderMe();renderBan();if(MODE==='host')drawT()}
+function syncStatus(){const n=S.pending.filter(m=>m.syncError).length,el=$('#sync');if(!el)return;
+  el.innerHTML=n?`${n} match${n>1?'s':''} conservé${n>1?'s':''} localement · <button class="sm" id="retryMatches">Réessayer</button>`:'☁ Synchronisé'}
 async function pull(force){if(busy||document.hidden)return;busy=true;
+  let pendingFailure=false;
   try{
     for(const m of [...S.pending]){
+      if(m.syncError){pendingFailure=true;continue}
       try{await post('match',{sid:m.sid,ts:m.ts,a:m.a,b:m.b,sa:m.sa,sb:m.sb,goals:m.goals||[]})}
-      catch(e){if(e.status===401)throw e;if(e.status>=400&&e.status<500)toast('Un match n\'a pas pu être enregistré (session terminée ?)');else throw e}
+      catch(e){
+        if(e.status===401)throw e;
+        if(e.status>=400&&e.status<500){const first=!m.syncError;m.syncError=e.status;pendingFailure=true;save();if(first)toast('Match conservé localement, synchronisation refusée.');continue}
+        throw e}
       S.pending=S.pending.filter(x=>x!==m);save()}
     const st=await api('state?v='+(force?0:VER));
-    $('#sync').textContent='☁ Synchronisé';
-    if(!st.same){const wh=isHost();VER=st.v;LOADED=true;ME=st.me;S.me=ME;const gm={};(st.goals||[]).forEach(g=>(gm[g.match_id]=gm[g.match_id]||[]).push({team:g.team,p:g.p,og:g.og}));R=st.matches.map(m=>({...m,goals:gm[m.id]||[]}));SA=st.sessions;USERS=st.users;PL=st.users.map(u=>u.name);
+    if(!st.same){const wh=isHost();VER=st.v;LOADED=true;ME=st.me;S.me=ME;CAN_IMPORT_SUPABASE=!!st.canImportSupabase;const gm={};(st.goals||[]).forEach(g=>(gm[g.match_id]=gm[g.match_id]||[]).push({team:g.team,p:g.p,og:g.og}));R=st.matches.map(m=>({...m,goals:gm[m.id]||[]}));SA=st.sessions;USERS=st.users;PL=st.users.map(u=>u.name);
       SESS=st.sessions.find(x=>x.status==='active')||null;S.cache=isHost()?SESS:null;
       if(wh&&!isHost())toast('Session terminée');
-      save();refresh()}}
-  catch(e){if(e.status===401){ME=null;S.me=null;S.cache=null;SESS=null;LOADED=false;save();refresh()}else $('#sync').textContent='Hors ligne, nouvel essai…'}
+      save();refresh()}
+    syncStatus()}
+  catch(e){if(e.status===401){ME=null;S.me=null;S.cache=null;SESS=null;LOADED=false;save();refresh()}else if(pendingFailure)syncStatus();else $('#sync').textContent=e.status>=400&&e.status<500?'Synchronisation refusée (HTTP '+e.status+')':'Hors ligne, nouvel essai…'}
   busy=false}
 
 /* ---- événements ---- */
 document.addEventListener('click',e=>{if(e.target.id==='pick'){closePick();return}const b=e.target.closest('button');if(!b)return;const d=b.dataset;
-  if(d.tab){document.querySelectorAll('.pane').forEach(p=>p.hidden=p.id!=='p-'+d.tab);
+  if(d.sessionView){document.querySelectorAll('.session-view').forEach(v=>v.hidden=v.id!=='session-'+d.sessionView);
+    document.querySelectorAll('[data-session-view]').forEach(t=>{const active=t===b;t.classList.toggle('on',active);t.setAttribute('aria-pressed',String(active))});scrollTo(0,0)}
+  else if(d.tab){const pane=d.tab==='session'?'p-session':'p-'+d.tab;
+    document.querySelectorAll('.pane').forEach(p=>p.hidden=p.id!==pane);
     document.querySelectorAll('nav button').forEach(n=>n.classList.toggle('on',n===b));scrollTo(0,0)}
   else if(d.add&&MODE==='host')openPick(d.add);
   else if(d.gp!==undefined)pickGoal(d.gp);
@@ -245,9 +257,10 @@ document.addEventListener('click',e=>{if(e.target.id==='pick'){closePick();retur
   else if(d.pi!==undefined){const p=PL[+d.pi],as=S.setup.assign,o=[null,'P',...S.setup.teams],nx=o[(o.indexOf(as[p]||null)+1)%o.length];
     if(nx)as[p]=nx;else delete as[p];save();renderSetup()}
   else if(d.del!==undefined)two(b,()=>{const m=M[+d.del];if(m&&m.id)api('matches/'+m.id,{method:'DELETE'}).then(()=>pull(true)).catch(()=>toast('Suppression impossible'))},'Sûr ?');
+  else if(b.id==='retryMatches'){S.pending.forEach(m=>delete m.syncError);save();pull(true)}
   else if(d.nc)two(b,()=>post('users/'+d.nc+'/code').then(r=>{NEWCODE={name:(USERS.find(u=>String(u.id)===d.nc)||{}).name,code:r.code};lastAdm='';pull(true)}).catch(()=>toast('Action refusée')),'Sûr ?');
   else if(d.adm){const u=USERS.find(x=>String(x.id)===d.adm);patch('users/'+d.adm,{role:u&&u.role==='admin'?'player':'admin'}).then(()=>pull(true)).catch(()=>toast('Action refusée'))}
-  else if(d.du)two(b,()=>api('users/'+d.du,{method:'DELETE'}).then(()=>pull(true)).catch(()=>toast('Suppression impossible')),'Sûr ?');
+  else if(d.du)two(b,()=>api('users/'+d.du,{method:'DELETE'}).then(()=>pull(true)).catch(e=>toast(e.status===409?'Terminez la session active de ce joueur avant de le supprimer':'Suppression impossible')),'Sûr ?');
   else if(b.id==='go')go();
   else if(b.id==='rst'){T.started&&!T.done?two(b,rst,'?'):rst()}
   else if(b.id==='val'){T.done?val():two(b,val)}

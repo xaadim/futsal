@@ -119,7 +119,9 @@ async function route(req, env, u, p) {
         .map((s) => ({ ...s, teams: JSON.parse(s.teams), live: s.live ? JSON.parse(s.live) : null }));
       const matches = (await q('SELECT id, ts, date, a, b, sa, sb, session_id FROM matches ORDER BY ts').all()).results;
       const goals = (await q('SELECT match_id, team, player p, own_goal og FROM goals ORDER BY id').all()).results;
-      return J({ v, me, users, sessions, matches, goals });
+      const used = (await q('SELECT (SELECT COUNT(*) FROM matches) + (SELECT COUNT(*) FROM sessions) c').first()).c;
+      const imported = await q("SELECT value FROM app_settings WHERE name = 'supabase_imported'").first();
+      return J({ v, me, users, sessions, matches, goals, canImportSupabase: imported?.value !== '1' && used === 0 });
     }
 
     // Générateur d'équipes équilibrées (les niveaux restent côté serveur)
@@ -135,11 +137,23 @@ async function route(req, env, u, p) {
     if (r === 'session' && m === 'POST') {
       const b = await body();
       if (p[2] === 'start') {
-        const tm = b.teams || {};
+        const tm = b.teams;
+        if (!tm || typeof tm !== 'object' || Array.isArray(tm)) return bad(400, 'equipes');
         const ks = Object.keys(tm);
-        if (ks.length < 2 || ks.length > 3 || ks.some((k) => !TEAMS.includes(k)) || !/^\d{4}-\d\d-\d\d$/.test(b.date || '')) return bad(400, 'equipes');
+        const date = typeof b.date === 'string' && /^\d{4}-\d\d-\d\d$/.test(b.date)
+          ? new Date(`${b.date}T00:00:00Z`) : null;
+        if (ks.length < 2 || ks.length > 3 || ks.some((k) => !TEAMS.includes(k)) ||
+          !date || !Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== b.date) return bad(400, 'equipes');
+        if (ks.some((k) => !Array.isArray(tm[k]) || tm[k].length > 30 ||
+          tm[k].some((name) => typeof name !== 'string' || !name.trim() || name.trim().length > 30))) return bad(400, 'joueurs');
+        const names = ks.flatMap((k) => tm[k].map((name) => name.trim()));
+        if (new Set(names.map((name) => name.toLowerCase())).size !== names.length) return bad(400, 'joueurs');
+        if (names.length) {
+          const known = (await q(`SELECT name FROM users WHERE name IN (${names.map(() => '?').join(',')})`, ...names).all()).results;
+          if (known.length !== names.length) return bad(400, 'joueurs');
+        }
         const clean = {};
-        ks.forEach((k) => { clean[k] = (Array.isArray(tm[k]) ? tm[k] : []).slice(0, 30).map((x) => String(x).slice(0, 30)); });
+        ks.forEach((k) => { clean[k] = tm[k].map((name) => name.trim()); });
         try {
           const x = await DB.batch([
             q('INSERT INTO sessions (date, host_user, teams, live, created_at) VALUES (?, ?, ?, ?, ?)',
@@ -179,14 +193,21 @@ async function route(req, env, u, p) {
       const n = (await q('SELECT COUNT(*) c FROM matches WHERE session_id = ?', s.id).first()).c;
       if (n >= s.max) return bad(409, 'limite');
       const gl = (Array.isArray(b.goals) ? b.goals : []).slice(0, 60).filter((g) => g && (g.team === b.a || g.team === b.b));
+      if (gl.some((g) => g.p != null && typeof g.p !== 'string' ||
+        (typeof g.p === 'string' && g.p.trim() && !tm[g.team].includes(g.p.trim())))) return bad(400, 'buteur');
       const st = [
-        q('INSERT OR IGNORE INTO matches (ts, date, a, b, sa, sb, session_id) VALUES (?, ?, ?, ?, ?, ?, ?)', b.ts, s.date, b.a, b.b, b.sa, b.sb, s.id),
+        q('INSERT INTO matches (ts, date, a, b, sa, sb, session_id) VALUES (?, ?, ?, ?, ?, ?, ?)', b.ts, s.date, b.a, b.b, b.sa, b.sb, s.id),
         ...gl.map((g) => q('INSERT INTO goals (match_id, team, player, own_goal) VALUES ((SELECT id FROM matches WHERE session_id = ? AND ts = ?), ?, ?, ?)',
-          s.id, b.ts, g.team, String(g.p || '').slice(0, 30), g.og ? 1 : 0)),
+          s.id, b.ts, g.team, String(g.p || '').trim().slice(0, 30), g.og ? 1 : 0)),
         bump(),
       ];
       if (n + 1 >= s.max) st.push(q("UPDATE sessions SET status = 'ended' WHERE id = ?", s.id));
-      await DB.batch(st);
+      try {
+        await DB.batch(st);
+      } catch (e) {
+        if (await q('SELECT 1 x FROM matches WHERE session_id = ? AND ts = ?', s.id, b.ts).first()) return J({ ok: 1, dup: 1 });
+        throw e;
+      }
       return J({ ok: 1 });
     }
 
@@ -194,13 +215,14 @@ async function route(req, env, u, p) {
     if (r === 'import-supabase' && m === 'POST') {
       if (!admin) return bad(403, 'admin');
       const used = (await q('SELECT (SELECT COUNT(*) FROM matches) + (SELECT COUNT(*) FROM sessions) c').first()).c;
-      if (used > 0) return bad(409, 'base-non-vide');
+      const imported = await q("SELECT value FROM app_settings WHERE name = 'supabase_imported'").first();
+      if (used > 0 || imported?.value === '1') return bad(409, 'base-non-vide');
       let data;
       try { data = await fetchSupabase(env.SUPABASE_URL || SB_URL, env.SUPABASE_KEY || SB_KEY); } catch (e) { return bad(502, 'supabase'); }
       const have = (await q('SELECT name FROM users').all()).results.map((x) => x.name);
       const { sql, codes, stats } = await buildImport({ ...data, skip: have });
       if (sql) await DB.exec(sql);
-      await bump().run();
+      await DB.batch([q("UPDATE app_settings SET value = '1' WHERE name = 'supabase_imported'"), bump()]);
       return J({ codes, stats });
     }
     if (r === 'matches' && m === 'DELETE') {
@@ -252,6 +274,7 @@ async function route(req, env, u, p) {
       }
       if (m === 'DELETE') {
         if (id === me.id) return bad(400, 'soi-meme');
+        if (await q("SELECT 1 x FROM sessions WHERE host_user = ? AND status = 'active'", id).first()) return bad(409, 'session-active');
         await DB.batch([q('DELETE FROM devices WHERE user_id = ?', id), q('DELETE FROM users WHERE id = ?', id), bump()]);
         return J({ ok: 1 });
       }
