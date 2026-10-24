@@ -61,6 +61,7 @@ select{appearance:none;-webkit-appearance:none;background:rgba(255,255,255,.4);b
 .minus{background:rgba(255,255,255,.4);color:var(--tt)}
 .val{width:100%;background:var(--tx);color:var(--bg);font-size:20px;padding:16px;border-radius:16px}
 .val.pulse{background:var(--ac);color:var(--act)}
+.val.ctl{margin:0 0 10px;padding:11px 14px}
 .arm{background:var(--danger)!important;color:#fff!important}
 /* tables */
 table{width:100%;border-collapse:collapse}
@@ -126,6 +127,25 @@ body:not(.anon) #auth{display:none}
 .big{font:800 40px var(--f);letter-spacing:.08em;margin:6px 0;user-select:all}
 .pc.pr{border-color:var(--ac)}
 @media(max-width:420px){header{flex-wrap:wrap}.header-meta{flex:1 1 100%;flex-direction:row;justify-content:space-between;align-items:center}}
+@media(max-width:420px){
+	main{padding:8px 12px 88px}
+	.session-switch{margin-bottom:8px}
+	.ban{padding:7px 10px;margin-bottom:8px}
+	#tc.card{padding:10px 12px;margin-bottom:8px;border-radius:16px}
+	#time{font-size:clamp(68px,23vw,100px);margin:0 0 5px}
+	.bar{height:7px;margin-bottom:8px}
+	.go{font-size:19px;padding:11px;border-radius:13px}
+	#rst{width:52px;font-size:20px}
+	details{margin-top:8px}
+	#board{gap:7px;margin-bottom:8px}
+	.side{padding:8px;border-radius:16px;gap:5px}
+	#board select{font-size:20px;padding:5px;border-radius:9px}
+	.n{font-size:clamp(64px,22vw,92px)}
+	.gl{font-size:12px;min-height:16px}
+	.plus{font-size:26px;padding:7px;border-radius:12px}
+	.minus{padding:6px}
+	.val.ctl{padding:9px 12px;margin-bottom:8px}
+}
 @media(max-width:360px){.session-switch{gap:2px;padding:3px}.session-switch button{gap:3px;padding:7px 2px;font-size:14px}}
 
 /* buteurs et stats */
