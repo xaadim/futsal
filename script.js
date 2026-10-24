@@ -257,7 +257,7 @@ document.addEventListener('click',e=>{if(e.target.id==='pick'){closePick();retur
   else if(d.pi!==undefined){const p=PL[+d.pi],as=S.setup.assign;
     if(!as[p])as[p]='P';else if(as[p]==='P')as[p]=S.setup.teams[0];else delete as[p];
     save();lastSetup='';renderSetup()}
-  else if(d.id==='toggle-pres'){const as=S.setup.assign,allPresent=PL.length>0&&PL.every(p=>!!as[p]);
+  else if(b.id==='toggle-pres'){const as=S.setup.assign,allPresent=PL.length>0&&PL.every(p=>!!as[p]);
     PL.forEach(p=>{if(allPresent)delete as[p];else if(!as[p])as[p]='P'});save();lastSetup='';renderSetup()}
   else if(d.del!==undefined)two(b,()=>{const m=M[+d.del];if(m&&m.id)api('matches/'+m.id,{method:'DELETE'}).then(()=>pull(true)).catch(()=>toast('Suppression impossible'))},'Sûr ?');
   else if(b.id==='retryMatches'){S.pending.forEach(m=>delete m.syncError);save();pull(true)}
