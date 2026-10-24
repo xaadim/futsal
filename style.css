@@ -102,6 +102,7 @@ body.view .ctl{display:none!important}
 .in{flex:1;min-width:0;padding:10px 12px;border-radius:12px;border:1px solid var(--bd);background:var(--bg);font-size:16px}
 .pl{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
 .pc{background:var(--bg);border:2px solid var(--bd);padding:10px 14px;font-size:16px}
+.pc.absent{border-color:var(--danger);color:var(--danger)}
 .pc.on{background:var(--tc);color:var(--tt);border-color:var(--tc)}
 .pc small{margin-left:6px;opacity:.8;font-weight:600}
 .ro{border-left:6px solid var(--tc);background:var(--bg);border-radius:8px;padding:6px 10px;margin:8px 0}

@@ -152,9 +152,9 @@ function renderSetup(){const el=$('#setup');if(MODE!=='none')return;let h='';
   else if(ME){const tm=S.setup.teams,as=S.setup.assign,pres=PL.filter(p=>as[p]).length;
     h=`<div class="card"><h2>Nouvelle session</h2><p class="note" style="margin:0 0 10px">Aucune session en cours. Votre compte (${esc(ME.name)}) gérera le chrono et la validation des scores jusqu'à la fin des 12 matchs. Les autres suivent en direct.</p>
 <div class="set"><label>Équipes ce soir (2 ou 3)</label><span>${ALL.map(t=>`<button class="chip t-${t}${tm.includes(t)?' on':''}" data-tg="${t}">${TM[t]}</button>`).join(' ')}</span></div></div>
-<div class="card"><h2>Joueurs présents</h2><p class="note" style="margin:0">Touchez un joueur : présent, puis une équipe, puis absent. Ou touchez 🎲 pour des équipes équilibrées.</p>
-<div class="pl">${PL.map((p,i)=>{const t=as[p];return `<button class="pc${t==='P'?' pr':t?' on t-'+t:''}" data-pi="${i}">${esc(p)}${t==='P'?'<small>présent</small>':t?`<small>${TM[t]}</small>`:''}</button>`}).join('')||`<span class="note">${isAdmin()?'Aucun joueur : ajoutez-en dans l\'onglet Joueurs.':'Aucun joueur : demandez à un admin d\'en ajouter.'}</span>`}</div>
-<div class="set"><button id="gen"${pres<tm.length?' disabled':''}>🎲 Générer les équipes</button><button class="sm" id="clr">Tous absents</button></div>
+<div class="card"><h2>Joueurs présents</h2><p class="note" style="margin:0">Touchez un joueur pour le faire passer d’absent à présent, puis choisissez une équipe. Touchez-le à nouveau pour le remettre absent. Ou touchez 🎲 pour des équipes équilibrées.</p>
+<div class="pl">${PL.map((p,i)=>{const t=as[p];return `<button class="pc${!t?' absent':t==='P'?' pr':' on t-'+t}" data-pi="${i}">${esc(p)}${!t?'<small>absent</small>':t==='P'?'<small>présent</small>':`<small>${TM[t]}</small>`}</button>`}).join('')||`<span class="note">${isAdmin()?'Aucun joueur : ajoutez-en dans l\'onglet Joueurs.':'Aucun joueur : demandez à un admin d\'en ajouter.'}</span>`}</div>
+<div class="set"><button id="gen"${pres<tm.length?' disabled':''}>🎲 Générer les équipes</button><button class="sm" id="toggle-pres">${pres===PL.length&&PL.length?'Tous absents':'Tous présents'}</button></div>
 ${tm.map(t=>{const n=PL.filter(p=>as[p]===t);return `<div class="ro t-${t}"><b>${TM[t]}</b> (${n.length}) ${n.map(esc).join(', ')}</div>`}).join('')}</div>
 <button class="val" id="start">▶ Démarrer la session</button>`}
   if(h!==lastSetup){lastSetup=h;el.innerHTML=h}}
@@ -254,8 +254,11 @@ document.addEventListener('click',e=>{if(e.target.id==='pick'){closePick();retur
     else if(L.length>=3){toast('Maximum 3 équipes ce soir');return}
     else S.setup.teams=ALL.filter(x=>x===t||L.includes(x));
     save();renderSetup()}
-  else if(d.pi!==undefined){const p=PL[+d.pi],as=S.setup.assign,o=[null,'P',...S.setup.teams],nx=o[(o.indexOf(as[p]||null)+1)%o.length];
-    if(nx)as[p]=nx;else delete as[p];save();renderSetup()}
+  else if(d.pi!==undefined){const p=PL[+d.pi],as=S.setup.assign;
+    if(!as[p])as[p]='P';else if(as[p]==='P')as[p]=S.setup.teams[0];else delete as[p];
+    save();lastSetup='';renderSetup()}
+  else if(d.id==='toggle-pres'){const as=S.setup.assign,allPresent=PL.length>0&&PL.every(p=>!!as[p]);
+    PL.forEach(p=>{if(allPresent)delete as[p];else if(!as[p])as[p]='P'});save();lastSetup='';renderSetup()}
   else if(d.del!==undefined)two(b,()=>{const m=M[+d.del];if(m&&m.id)api('matches/'+m.id,{method:'DELETE'}).then(()=>pull(true)).catch(()=>toast('Suppression impossible'))},'Sûr ?');
   else if(b.id==='retryMatches'){S.pending.forEach(m=>delete m.syncError);save();pull(true)}
   else if(d.nc)two(b,()=>post('users/'+d.nc+'/code').then(r=>{NEWCODE={name:(USERS.find(u=>String(u.id)===d.nc)||{}).name,code:r.code};lastAdm='';pull(true)}).catch(()=>toast('Action refusée')),'Sûr ?');
