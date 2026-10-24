@@ -9,6 +9,7 @@
 <link rel="icon" href="favicon.png" type="image/png">
 </head>
 <body>
+<div id="auth"></div>
 <main>
 <header><div class="brand"><svg class="logo" viewBox="0 0 48 48" role="img" aria-label="Ballon de futsal"><circle cx="24" cy="24" r="22" fill="#fff" stroke="#10141f" stroke-width="3"/><path d="M24 15l8 6-3 9H19l-3-9z" fill="#10141f"/><path d="M24 15V4M32 21l11-3M29 30l7 9M19 30l-7 9M16 21L5 18" stroke="#10141f" stroke-width="2.5" stroke-linecap="round" fill="none"/></svg><h1>Futsal Aytré</h1></div><div id="date"></div></header>
 
@@ -45,9 +46,12 @@
   <div class="card bar2"><select id="yr" aria-label="Année"></select><span id="sync" class="note"></span></div>
   <div class="card" id="sea"></div>
   <div class="card" id="pls"></div>
+  <div class="card" id="scs"></div>
   <div class="card" id="evs"></div>
 </section>
-<footer><span>Futsal Aytré <span id="ver"></span></span><span>© <span id="cy"></span> <a href="https://xaadim.dev/" target="_blank" rel="noopener">xaadim</a></span></footer>
+<section id="p-me" class="pane" hidden><div class="card" id="me"></div></section>
+<section id="p-admin" class="pane" hidden><div id="adm"></div></section>
+<footer><span>Futsal Aytré <span id="ver"></span></span><span>© <span id="cy"></span> <a href="https://xaadim.dev/" target="_blank" rel="noopener">xaadim</a></span><span id="who"></span></footer>
 </main>
 
 <nav>
@@ -55,7 +59,10 @@
   <button data-tab="rank"><span>🏆</span>Classement</button>
   <button data-tab="hist"><span>📋</span>Matchs</button>
   <button data-tab="season"><span>📅</span>Saison</button>
+  <button data-tab="me"><span>⭐</span>Mes stats</button>
+  <button data-tab="admin" id="tabAdmin" hidden><span>👤</span>Joueurs</button>
 </nav>
+<div id="pick" hidden></div>
 <div id="toast" role="status"></div>
 
 <script src="version.js"></script>

@@ -1,9 +1,9 @@
+// Configuration de base, sans identifiant de base de données :
+// scripts/deploy.mjs y ajoute la base D1 à partir des variables de build Cloudflare.
 {
   "name": "futsal",
+  "main": "src/worker.js",
   "compatibility_date": "2026-10-11",
-  "assets": {
-    "directory": "."
-  },
-  "preview_urls": true,
-  "previews": {}
+  "assets": { "directory": "." },
+  "preview_urls": true
 }
