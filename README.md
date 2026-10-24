@@ -54,9 +54,9 @@ Commandes (Settings > Build) :
 |---|---|
 | Build command | *(vide)* |
 | Deploy command (production) | `node scripts/deploy.mjs` |
-| Preview command (branches hors production) | `node scripts/deploy.mjs preview` |
+| Preview command (branches hors production) | `node deploy.mjs preview` |
 
-Ne mettez pas `node scripts/deploy.mjs preview` dans **Build command** : le script applique les migrations de la base dev puis lance lui-même `wrangler preview`. La commande de preview Cloudflare doit appeler le script une seule fois.
+Le wrapper `deploy.mjs` redirige vers `scripts/deploy.mjs`. Ne mettez pas `node scripts/deploy.mjs preview` dans **Build command** : le script applique les migrations de la base dev puis lance lui-même `wrangler preview`. La commande de preview Cloudflare doit appeler le script une seule fois.
 
 Branche de production : `main`. Les autres branches (par exemple `develop`) créent une **Preview** (Worker Previews) liée à la base dev.
 URL de test : `<nom-de-la-branche>-futsal.<votre-sous-domaine>.workers.dev` (onglet Previews du Worker).
