@@ -230,6 +230,8 @@ async function pull(force){if(busy||document.hidden)return;busy=true;
         throw e}
       S.pending=S.pending.filter(x=>x!==m);save()}
     const st=await api('state?v='+(force?0:VER));
+    const canImport=!!st.canImportSupabase;
+    if(CAN_IMPORT_SUPABASE!==canImport){CAN_IMPORT_SUPABASE=canImport;lastAdm='';renderAdmin()}
     if(!st.same){const wh=isHost();VER=st.v;LOADED=true;ME=st.me;S.me=ME;CAN_IMPORT_SUPABASE=!!st.canImportSupabase;const gm={};(st.goals||[]).forEach(g=>(gm[g.match_id]=gm[g.match_id]||[]).push({team:g.team,p:g.p,og:g.og}));R=st.matches.map(m=>({...m,goals:gm[m.id]||[]}));SA=st.sessions;USERS=st.users;PL=st.users.map(u=>u.name);
       SESS=st.sessions.find(x=>x.status==='active')||null;S.cache=isHost()?SESS:null;
       if(wh&&!isHost())toast('Session terminée');

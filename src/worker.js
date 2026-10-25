@@ -110,7 +110,10 @@ async function route(req, env, u, p) {
 
     if (r === 'state' && m === 'GET') {
       const v = (await q('SELECT v FROM meta').first()).v;
-      if (u.searchParams.get('v') === String(v)) return J({ v, same: true });
+      const used = (await q('SELECT (SELECT COUNT(*) FROM matches) + (SELECT COUNT(*) FROM sessions) c').first()).c;
+      const imported = await q("SELECT value FROM app_settings WHERE name = 'supabase_imported'").first();
+      const canImportSupabase = imported?.value !== '1' && used === 0;
+      if (u.searchParams.get('v') === String(v)) return J({ v, same: true, canImportSupabase });
       const users = (await q('SELECT id, name, role, level FROM users ORDER BY name COLLATE NOCASE').all()).results
         .map((x) => (admin ? x : { id: x.id, name: x.name }));
       const sessions = (await q(
@@ -119,9 +122,7 @@ async function route(req, env, u, p) {
         .map((s) => ({ ...s, teams: JSON.parse(s.teams), live: s.live ? JSON.parse(s.live) : null }));
       const matches = (await q('SELECT id, ts, date, a, b, sa, sb, session_id FROM matches ORDER BY ts').all()).results;
       const goals = (await q('SELECT match_id, team, player p, own_goal og FROM goals ORDER BY id').all()).results;
-      const used = (await q('SELECT (SELECT COUNT(*) FROM matches) + (SELECT COUNT(*) FROM sessions) c').first()).c;
-      const imported = await q("SELECT value FROM app_settings WHERE name = 'supabase_imported'").first();
-      return J({ v, me, users, sessions, matches, goals, canImportSupabase: imported?.value !== '1' && used === 0 });
+      return J({ v, me, users, sessions, matches, goals, canImportSupabase });
     }
 
     // Générateur d'équipes équilibrées (les niveaux restent côté serveur)
