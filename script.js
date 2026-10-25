@@ -88,6 +88,7 @@ function setMode(){TEAMS=SESS&&SESS.teams?ALL.filter(t=>SESS.teams[t]):S.setup.t
   MODE=!SESS?'none':(isHost()?'host':'view');
   document.body.classList.toggle('anon',!ME);document.body.classList.toggle('view',MODE==='view');
   $('#setup').hidden=MODE!=='none';$('#live').hidden=MODE==='none';
+  $('#session-dock').hidden=MODE==='none';
   const ta=$('#tabAdmin');if(ta)ta.hidden=!isAdmin();
   const pa=$('#p-admin');if(pa&&!isAdmin()){const leavingAdmin=!pa.hidden;pa.hidden=true;if(leavingAdmin){$('#p-session').hidden=false;document.querySelectorAll('nav button').forEach(n=>n.classList.toggle('on',n.dataset.tab==='session'))}}
   if(MODE!=='host')closePick();
