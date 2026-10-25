@@ -85,7 +85,7 @@ function setMode(){TEAMS=SESS&&SESS.teams?ALL.filter(t=>SESS.teams[t]):S.setup.t
   document.body.classList.toggle('anon',!ME);document.body.classList.toggle('view',MODE==='view');
   $('#setup').hidden=MODE!=='none';$('#live').hidden=MODE==='none';
   const ta=$('#tabAdmin');if(ta)ta.hidden=!isAdmin();
-  const pa=$('#p-admin');if(pa&&!isAdmin())pa.hidden=true;
+  const pa=$('#p-admin');if(pa){const leavingAdmin=!isAdmin()&&!pa.hidden;pa.hidden=!isAdmin();if(leavingAdmin){$('#p-session').hidden=false;document.querySelectorAll('nav button').forEach(n=>n.classList.toggle('on',n.dataset.tab==='session'))}}
   if(MODE!=='host')closePick();
   if(MODE==='host')fix()}
 function refresh(){setMode();renderAuth();renderWho();if(MODE!==prev){prev=MODE;lastBoard='';renderBoard();if(MODE==='host')drawT()}rebuild();renderSetup();renderAdmin();viewSync()}
@@ -244,7 +244,7 @@ async function pull(force){if(busy||document.hidden)return;busy=true;
 document.addEventListener('click',e=>{if(e.target.id==='pick'){closePick();return}const b=e.target.closest('button');if(!b)return;const d=b.dataset;
   if(d.sessionView){document.querySelectorAll('.session-view').forEach(v=>v.hidden=v.id!=='session-'+d.sessionView);
     document.querySelectorAll('[data-session-view]').forEach(t=>{const active=t===b;t.classList.toggle('on',active);t.setAttribute('aria-pressed',String(active))});scrollTo(0,0)}
-  else if(d.tab){const pane=d.tab==='session'?'p-session':'p-'+d.tab;
+  else if(d.tab){if(d.tab==='admin'&&!isAdmin())return;const pane=d.tab==='session'?'p-session':'p-'+d.tab;
     document.querySelectorAll('.pane').forEach(p=>p.hidden=p.id!==pane);
     document.querySelectorAll('nav button').forEach(n=>n.classList.toggle('on',n===b));scrollTo(0,0)}
   else if(d.add&&MODE==='host')openPick(d.add);
