@@ -10,7 +10,7 @@ if(!S.setup||!S.setup.teams)S.setup={teams:['jaune','orange','vert'],assign:{}};
 if(S.setup.teams.length>3)S.setup.teams=S.setup.teams.slice(0,3);
 if(!S.cur.goals)S.cur.goals=[];
 let T,iv,wl,YR,R=[],M=[],SA=[],PL=[],USERS=[],LOADED=false,MODE='none',prev='',VER=0,busy=false,lastLive='',pushing=false,dirty=false,lastBoard='',lastBan='',lastSetup='',lastAdm='',NEWCODE=null,PICK=null,IMPORTED=null;
-let ME=S.me,SESS=(ME&&S.cache&&S.cache.host_user===ME.id)?S.cache:null,TEAMS=S.setup.teams,CAN_IMPORT_SUPABASE=false;
+let ME=S.me,SESS=(ME&&S.cache&&S.cache.host_user===ME.id)?S.cache:null,TEAMS=S.setup.teams,CAN_IMPORT_SUPABASE=false,LEVEL_CHANGES={},LEVEL_TAPS=new WeakMap();
 const isHost=()=>!!(SESS&&ME&&SESS.host_user===ME.id),isAdmin=()=>!!(ME&&ME.role==='admin');
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 const dt=m=>m.date||today(),sg=v=>(v>0?'+':'')+v;
@@ -128,6 +128,10 @@ function doImport(){post('import-supabase').then(r=>{IMPORTED=r;CAN_IMPORT_SUPAB
 async function logout(){try{await post('logout')}catch(e){}ME=null;S.me=null;S.cache=null;S.timer=null;SESS=null;save();VER=0;LOADED=false;lastSetup='';lastAdm='';refresh()}
 function addUser(){const name=($('#nn').value||'').trim();if(!name)return;
   post('users',{name,level:+$('#nl').value,role:$('#na').checked?'admin':'player'}).then(r=>{NEWCODE={name:r.name,code:r.code};lastAdm='';pull(true)}).catch(e=>toast(e.status===409?'Ce nom existe déjà':'Création impossible'))}
+async function saveLevels(){const levels=Object.entries(LEVEL_CHANGES).map(([id,level])=>({id:+id,level}));if(!levels.length)return;
+  const button=$('#saveLevels');if(button)button.disabled=true;
+  try{await patch('users/levels',{levels});LEVEL_CHANGES={};lastAdm='';toast('Niveaux sauvegardés');await pull(true)}
+  catch(e){toast('Sauvegarde impossible, réessayez');lastAdm='';renderAdmin()}}
 
 /* ---- match ---- */
 function val(){if(MODE!=='host')return;if(nSess()>=SESS.max){toast('Limite de '+SESS.max+' matchs atteinte');return}
@@ -164,12 +168,12 @@ function renderAdmin(){const el=$('#adm');if(!el)return;if(!isAdmin()){el.replac
   if(isAdmin()){
     const nc=NEWCODE?`<div class="card code"><div>Code de <b>${esc(NEWCODE.name||'')}</b></div><div class="big">${esc(NEWCODE.code)}</div><p class="note">À lui transmettre maintenant. Il ne sera plus affiché.</p><div class="set"><button class="sm" id="cpcode">Copier</button><button class="sm" id="hidecode">J'ai noté le code</button></div></div>`:'';
     const levels=['Débutant','À l’aise','Avancé','Pro'];
-    const levelSlider=(value,attrs)=>{const level=Math.min(4,Math.max(1,Number(value)||2));return `<div class="level-slider"><input type="range" min="1" max="4" step="1" value="${level}" style="--level-value:${level}" ${attrs}><div class="level-labels">${levels.map((label,i)=>`<span>${label}</span>`).join('')}</div></div>`};
+    const levelSlider=(value,attrs,locked=false)=>{const level=Math.min(4,Math.max(1,Number(value)||2));return `<div class="level-slider${locked?' locked':''}" data-level-slider${locked?' data-locked="true"':''}><input type="range" min="1" max="4" step="1" value="${level}" style="--level-value:${level}" ${locked?'disabled':''} ${attrs}><div class="level-labels">${levels.map((label,i)=>`<span>${label}</span>`).join('')}</div>${locked?'<small class="slider-hint">Touchez deux fois pour modifier</small>':''}</div>`};
     const imp=IMPORTED?`<div class="card code"><h2>Codes des joueurs repris</h2><p class="note">${IMPORTED.stats.matchs} matchs repris. À transmettre maintenant : ces codes ne seront plus affichés.</p>${IMPORTED.codes.map(c=>`<div class="ur"><b>${esc(c.name)}</b><span class="big" style="font-size:26px">${esc(c.code)}</span></div>`).join('')}<div class="set"><button class="sm" id="cpall">Copier la liste</button><button class="sm" id="hideimp">J'ai noté les codes</button></div></div>`:'';
     const importCard=CAN_IMPORT_SUPABASE?`<div class="card"><h2>Historique Supabase</h2><p class="note" style="margin:0 0 10px">Reprend les joueurs, sessions et matchs de l'ancienne base. Possible une seule fois, sur une base sans match.</p><button id="imp">Importer l'historique Supabase</button></div>`:'';
     h=nc+imp+`<div class="card"><h2>Nouveau joueur</h2><div class="set"><input class="in" id="nn" type="text" maxlength="30" placeholder="Prénom"></div><div class="level-field"><label for="nl">Niveau</label>${levelSlider(2,'id="nl" aria-label="Niveau du nouveau joueur"')}</div><div class="set"><label><input type="checkbox" id="na"> Admin</label><button id="addu">Créer</button></div><p class="note">Un code d'activation unique est généré pour ce joueur.</p></div>
 ${importCard}
-  <div class="card"><h2>Joueurs (${USERS.length})</h2>${USERS.map(u=>`<div class="ur"><b>${esc(u.name)}${u.role==='admin'?' <span class="badge">admin</span>':''}</b><div class="level-field"><label for="level-${u.id}">Niveau</label>${levelSlider(u.level,`id="level-${u.id}" data-lv="${u.id}" aria-label="Niveau de ${esc(u.name)}"`)}</div><button class="sm" data-nc="${u.id}">Nouveau code</button>${u.id===ME.id?'':`<button class="sm" data-adm="${u.id}">${u.role==='admin'?'Retirer admin':'Passer admin'}</button><button class="sm" data-du="${u.id}" aria-label="Supprimer ${esc(u.name)}">✕</button>`}</div>`).join('')||'<div class="empty">Aucun joueur.</div>'}</div>`}
+  <div class="card"><h2>Joueurs (${USERS.length})</h2>${Object.keys(LEVEL_CHANGES).length?'<p class="note pending-levels">Modifications de niveaux non sauvegardées.</p>':''}${USERS.map(u=>`<div class="ur"><b>${esc(u.name)}${u.role==='admin'?' <span class="badge">admin</span>':''}</b><div class="level-field"><label for="level-${u.id}">Niveau</label>${levelSlider(LEVEL_CHANGES[u.id]??u.level,`id="level-${u.id}" data-lv="${u.id}" aria-label="Niveau de ${esc(u.name)}"`,true)}</div><button class="sm" data-nc="${u.id}">Nouveau code</button>${u.id===ME.id?'':`<button class="sm" data-adm="${u.id}">${u.role==='admin'?'Retirer admin':'Passer admin'}</button><button class="sm" data-du="${u.id}" aria-label="Supprimer ${esc(u.name)}">✕</button>`}</div>`).join('')||'<div class="empty">Aucun joueur.</div>'}<button class="val" id="saveLevels"${Object.keys(LEVEL_CHANGES).length?'':' disabled'}>💾 Sauvegarder les niveaux</button></div>`}
   if(h!==lastAdm){lastAdm=h;el.innerHTML=h}}
 function calc(L,teams){const r={};teams.forEach(t=>r[t]={t,j:0,v:0,n:0,l:0,gf:0,ga:0,d:0,p:0});
   L.forEach(m=>{const A=r[m.a],B=r[m.b];if(!A||!B)return;A.j++;B.j++;A.gf+=m.sa;B.gf+=m.sb;A.d+=m.sa-m.sb;B.d+=m.sb-m.sa;
@@ -297,15 +301,20 @@ document.addEventListener('click',e=>{if(e.target.id==='pick'){closePick();retur
   else if(b.id==='logout')logout();
   else if(b.id==='myStats'){document.querySelector('[data-tab="me"]').click()}
   else if(b.id==='addu')addUser();
+  else if(b.id==='saveLevels')saveLevels();
   else if(b.id==='cpcode'){try{navigator.clipboard.writeText(NEWCODE.code);toast('Copié')}catch(err){}}
   else if(b.id==='hidecode'){NEWCODE=null;lastAdm='';renderAdmin()}});
 document.addEventListener('change',e=>{const el=e.target,s=el.dataset.sel;
   if(el.id==='yr'){YR=el.value;renderSeason();renderMe()}
   else if(el.id==='sessionSelect')renderSessionRank(M.filter(m=>dt(m).startsWith(YR)));
-  else if(el.dataset.lv)patch('users/'+el.dataset.lv,{level:+el.value}).then(()=>pull(true)).catch(()=>toast('Action refusée'));
+  else if(el.dataset.lv){LEVEL_CHANGES[el.dataset.lv]=+el.value;lastAdm='';renderAdmin()}
   else if(s&&MODE==='host'){const o=s==='a'?'b':'a';if(el.value===S.cur[o])S.cur[o]=S.cur[s];S.cur[s]=el.value;S.cur.goals.forEach(g=>{g.p=''});ch()}
   else if(el.id==='mm'||el.id==='ss'){S.dur=Math.max(10,((+$('#mm').value||0)*60)+(+$('#ss').value||0));save();if(!T.started)rst();else{drawT();pushLive(true)}}});
 document.addEventListener('input',e=>{if(e.target.matches('.level-slider input[type="range"]'))e.target.style.setProperty('--level-value',e.target.value)});
+document.addEventListener('click',e=>{const wrapper=e.target.closest('.level-slider[data-locked]');if(!wrapper)return;
+  const now=Date.now(),last=LEVEL_TAPS.get(wrapper)||0;
+  if(now-last<450){wrapper.removeAttribute('data-locked');wrapper.classList.remove('locked');const input=wrapper.querySelector('input[type="range"]');input.disabled=false;input.focus({preventScroll:true});wrapper.querySelector('.slider-hint')?.remove();LEVEL_TAPS.delete(wrapper)}
+  else{LEVEL_TAPS.set(wrapper,now);toast('Touchez encore une fois rapidement pour activer le curseur')}});
 document.addEventListener('keydown',e=>{if(e.key!=='Enter')return;if(e.target.id==='code')login();if(e.target.id==='nn')addUser()});
 
 /* ---- init ---- */

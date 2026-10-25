@@ -250,6 +250,18 @@ async function route(req, env, u, p) {
           return bad(409, 'nom-existant');
         }
       }
+      if (m === 'PATCH' && p[2] === 'levels') {
+        const b = await body();
+        if (!Array.isArray(b.levels) || b.levels.length > 100 || b.levels.some(x =>
+          !Number.isInteger(+x.id) || +x.id < 1 || !Number.isInteger(+x.level) || +x.level < 1 || +x.level > 4)) return bad(400, 'niveaux');
+        const levels = b.levels.map(x => ({ id: +x.id, level: +x.level }));
+        if (new Set(levels.map(x => x.id)).size !== levels.length) return bad(400, 'doublons');
+        if (!levels.length) return J({ ok: 1, count: 0 });
+        const ids = (await q(`SELECT id FROM users WHERE id IN (${levels.map(() => '?').join(',')})`, ...levels.map(x => x.id)).all()).results;
+        if (ids.length !== levels.length) return bad(404, 'joueur');
+        await DB.batch([...levels.map(x => q('UPDATE users SET level = ? WHERE id = ?', x.level, x.id)), bump()]);
+        return J({ ok: 1, count: levels.length });
+      }
       const id = +p[2];
       if (m === 'POST' && p[3] === 'code') {
         const code = newCode();
