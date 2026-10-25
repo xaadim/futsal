@@ -9,7 +9,7 @@ let S=Object.assign({dur:390,cur:{a:'jaune',b:'orange',sa:0,sb:0},pending:[],set
 if(!S.setup||!S.setup.teams)S.setup={teams:['jaune','orange','vert'],assign:{}};
 if(S.setup.teams.length>3)S.setup.teams=S.setup.teams.slice(0,3);
 if(!S.cur.goals)S.cur.goals=[];
-let T,iv,wl,YR,R=[],M=[],SA=[],PL=[],USERS=[],LOADED=false,MODE='none',prev='',VER=0,busy=false,lastLive='',pushing=false,dirty=false,lastBoard='',lastBan='',lastSetup='',lastAdm='',NEWCODE=null,PICK=null,IMPORTED=null;
+let T,iv,wl,YR,R=[],M=[],SA=[],PL=[],USERS=[],LOADED=false,MODE='none',prev='',VER=0,busy=false,lastLive='',pushing=false,dirty=false,lastBoard='',lastBan='',lastSetup='',lastAdm='',NEWCODE=null,PICK=null,IMPORTED=null,autoValidateTimer=null,lastActivity=Date.now();
 let ME=S.me,SESS=(ME&&S.cache&&S.cache.host_user===ME.id)?S.cache:null,TEAMS=S.setup.teams,CAN_IMPORT_SUPABASE=false,LEVEL_CHANGES={},LEVEL_TAPS=new WeakMap();
 const isHost=()=>!!(SESS&&ME&&SESS.host_user===ME.id),isAdmin=()=>!!(ME&&ME.role==='admin');
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
@@ -30,22 +30,26 @@ function endBuzz(){for(let i=0;i<3;i++){const t=i*1.3;tone(220,t,1.05,'sawtooth'
 
 /* ---- chrono (géré par l'organisateur de la session) ---- */
 function saveT(){S.timer=(SESS&&isHost())?{sid:SESS.id,run:T.run,end:T.end,rem:T.rem,half:T.half,done:T.done,started:T.started}:null;save()}
-function rst(){clearInterval(iv);T={run:false,rem:S.dur,end:0,half:false,done:false,started:false,hb:0};saveT();drawT();renderRank();pushLive(true)}
+function cancelAutoValidate(){clearTimeout(autoValidateTimer);autoValidateTimer=null}
+function scheduleAutoValidate(){cancelAutoValidate();if(MODE!=='host'||!T.done)return;autoValidateTimer=setTimeout(()=>{if(MODE==='host'&&T.done&&Date.now()-lastActivity>=10000)val();else scheduleAutoValidate()},Math.max(0,10000-(Date.now()-lastActivity)))}
+function markActivity(){lastActivity=Date.now();if(T&&T.done)scheduleAutoValidate()}
+function rst(){cancelAutoValidate();clearInterval(iv);T={run:false,rem:S.dur,end:0,half:false,done:false,started:false,hb:0};saveT();drawT();renderRank();pushLive(true)}
 function restoreT(){const t=S.timer;
   if(MODE==='host'&&t&&SESS&&t.sid===SESS.id){clearInterval(iv);T={run:false,rem:t.rem,end:0,half:!!t.half,done:!!t.done,started:!!t.started,hb:0};
     if(t.run){const rem=(t.end-Date.now())/1000;
-      if(rem>0){T.run=true;T.end=t.end;T.rem=rem;iv=setInterval(tick,100)}else{T.rem=0;T.done=true;T.half=true}}
-    saveT();drawT();pushLive(true)}
+      if(rem>0){T.run=true;T.end=t.end;T.rem=rem;iv=setInterval(tick,100)}else{T.rem=0;T.done=true;T.half=true;lastActivity=Date.now()}}
+    saveT();drawT();pushLive(true);if(T.done)scheduleAutoValidate()}
   else rst()}
 async function lock(){try{if(wl)return;wl=await navigator.wakeLock.request('screen');wl.addEventListener('release',()=>{wl=null})}catch(e){wl=null}}
-document.addEventListener('pointerdown',lock);
+document.addEventListener('pointerdown',()=>{lock();markActivity()});
+document.addEventListener('keydown',markActivity);
 function go(){au();if(T.done)return;
   if(T.run){T.rem=Math.max(0,(T.end-Date.now())/1000);T.run=false;clearInterval(iv)}
   else{T.run=true;T.started=true;T.end=Date.now()+T.rem*1000;lock();iv=setInterval(tick,100)}
   saveT();drawT();renderRank();pushLive(true)}
 function tick(){if(!T.run)return;T.rem=Math.max(0,(T.end-Date.now())/1000);
   if(!T.half&&T.rem<=S.dur/2){T.half=true;T.hb=Date.now()+4000;halfBeep();saveT();pushLive(true)}
-  if(T.rem<=0){T.run=false;T.done=true;clearInterval(iv);endBuzz();saveT();pushLive(true)}
+  if(T.rem<=0){T.run=false;T.done=true;clearInterval(iv);endBuzz();saveT();pushLive(true);lastActivity=Date.now();scheduleAutoValidate()}
   drawT()}
 function liveState(){const l=MODE==='host'?{...S.cur,run:T.run,started:T.started,done:T.done}:((SESS&&SESS.live)||{});return l||{}}
 function updateLiveTabs(){const l=liveState(),active=!!(SESS&&l.started);
@@ -135,6 +139,7 @@ async function saveLevels(){const levels=Object.entries(LEVEL_CHANGES).map(([id,
 
 /* ---- match ---- */
 function val(){if(MODE!=='host')return;if(nSess()>=SESS.max){toast('Limite de '+SESS.max+' matchs atteinte');return}
+  cancelAutoValidate();
   const c=S.cur,m={date:today(),ts:Date.now(),a:c.a,b:c.b,sa:c.sa,sb:c.sb,session_id:SESS.id,sid:SESS.id,goals:c.goals.map(g=>({team:g.s==='a'?c.a:c.b,p:g.p,og:g.og}))};
   S.pending.push(m);save();rebuild();
   const td=M.filter(x=>x.session_id===SESS.id),last=t=>{for(let i=td.length-1;i>=0;i--)if(td[i].a===t||td[i].b===t)return i;return -1},
@@ -148,7 +153,7 @@ function val(){if(MODE!=='host')return;if(nSess()>=SESS.max){toast('Limite de '+
 /* ---- rendu ---- */
 function renderBoard(){let c=S.cur,G=S.cur.goals||[];if(MODE==='view'){const L=(SESS&&SESS.live)||{};c={a:L.a||TEAMS[0],b:L.b||TEAMS[1],sa:L.sa||0,sb:L.sb||0};G=L.g||[]}
   const dis=MODE==='view'?' disabled':'';
-  $('#board').innerHTML=['a','b'].map(k=>{const team=c[k],players=(SESS&&SESS.teams&&SESS.teams[team])||[];return `<div class="side t-${team}"><select data-sel="${k}"${dis} aria-label="Équipe">${TEAMS.map(x=>`<option value="${x}"${x===team?' selected':''}>${TM[x]}</option>`).join('')}</select>${players.length?`<div class="team-players">${players.map(esc).join(' · ')}</div>`:''}<div class="n">${c['s'+k]}</div><div class="gl">${esc(gcount(G.filter(g=>g.s===k).map(g=>g.og?'csc':(g.p||'?'))))}</div><button class="plus ctl" data-add="${k}">+1</button><button class="minus ctl" data-sub="${k}">−1</button></div>`}).join('')}
+  $('#board').innerHTML=['a','b'].map(k=>{const team=c[k],players=(SESS&&SESS.teams&&SESS.teams[team])||[];return `<div class="side t-${team}"><select data-sel="${k}"${dis} aria-label="Équipe">${TEAMS.map(x=>`<option value="${x}"${x===team?' selected':''}>${TM[x]}</option>`).join('')}</select><div class="team-players">${players.length?players.map(esc).join(' · '):'&nbsp;'}</div><div class="n">${c['s'+k]}</div><div class="gl">${esc(gcount(G.filter(g=>g.s===k).map(g=>g.og?'csc':(g.p||'?'))))}</div><button class="plus ctl" data-add="${k}">+1</button><button class="minus ctl" data-sub="${k}">−1</button></div>`}).join('')}
 function renderAuth(){const el=$('#auth');if(ME){el.innerHTML='';return}
   if(!el.firstChild){el.innerHTML=`<div class="card empty" id="authwait">Vérification de l'installation…</div><div class="card" id="logincard" hidden><h2>Futsal Aytré</h2><p class="note" style="margin:0 0 12px">Entrez votre code d'activation personnel. Il n'est demandé qu'une seule fois sur ce téléphone.</p><div class="set"><input class="in" id="code" type="text" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="XXXXX-XXXXX" maxlength="14"><button id="login">Entrer</button></div><p class="note" id="autherr" role="alert"></p><p class="note">Pas de code ? Demandez-le à un admin du groupe.</p></div><div class="card" id="firstrun" hidden><h2>Première installation</h2><p class="note" style="margin:0 0 10px">Créez le compte administrateur. La clé d'installation est la valeur de SETUP_KEY dans Cloudflare.</p><div class="set"><input class="in" id="sk" type="password" placeholder="Clé d'installation" autocomplete="off"></div><div class="set"><input class="in" id="bn" type="text" maxlength="30" placeholder="Votre prénom"><button id="boot">Créer</button></div><p class="note" id="setuperr" role="alert"></p></div>`;
     api('setup').then(r=>{const w=$('#authwait'),l=$('#logincard'),f=$('#firstrun');if(w)w.hidden=true;if(l)l.hidden=!!r.needsAdmin;if(f)f.hidden=!r.needsAdmin}).catch(()=>{const w=$('#authwait');if(w)w.textContent='Vérification impossible. Rechargez la page pour réessayer.'})}}

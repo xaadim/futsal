@@ -66,7 +66,7 @@ input[type=number]{width:62px;padding:8px;border-radius:10px;border:1px solid va
 .side{background:var(--tc);color:var(--tt);border-radius:22px;padding:12px;text-align:center;display:flex;flex-direction:column;gap:8px}
 select{appearance:none;-webkit-appearance:none;background:rgba(255,255,255,.4);border:0;border-radius:12px;padding:8px;font:800 24px var(--f);text-align:center;text-align-last:center;color:var(--tt);width:100%}
 .n{font:800 clamp(90px,32vw,150px)/.9 var(--f);font-variant-numeric:tabular-nums}
-.team-players{font-size:12px;line-height:1.15;overflow-wrap:anywhere;opacity:.8;min-height:0}
+.team-players{font-size:12px;line-height:1.15;overflow-wrap:anywhere;opacity:.8;height:4.6em;flex:none;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4;overflow:hidden}
 .plus{background:var(--tt);color:var(--tc);font:800 34px var(--f);padding:12px;border-radius:16px}
 .minus{background:rgba(255,255,255,.4);color:var(--tt)}
 .val{width:100%;background:var(--tx);color:var(--bg);font-size:20px;padding:16px;border-radius:16px}
@@ -166,7 +166,7 @@ body:not(.anon) #auth{display:none}
 	#board{gap:7px;margin-bottom:8px}
 	.side{padding:8px;border-radius:15px;gap:5px}
 	#board select{font-size:20px;line-height:1;padding:5px;border-radius:8px}
-	.team-players{font-size:11px;line-height:1.1}
+	.team-players{font-size:11px;line-height:1.1;height:4.4em}
 	#board .n{font-size:clamp(64px,19vw,84px);line-height:.85}
 	#board .gl{font-size:10px;line-height:1;min-height:10px}
 	#board .plus{font-size:24px;line-height:1;padding:7px;border-radius:10px}
