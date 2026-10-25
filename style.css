@@ -135,9 +135,10 @@ body:not(.anon) #auth{display:none}
 .ur b{flex:1 1 100%;font-size:18px}
 .level-field{display:grid;gap:5px;width:100%;color:var(--mu);font-size:13px}
 .level-slider{width:100%;padding:0 2px}
-.level-slider input[type=range]{appearance:none;-webkit-appearance:none;display:block;width:100%;height:24px;margin:0;background:transparent;cursor:pointer;touch-action:pan-y}
-.level-slider input[type=range]::-webkit-slider-runnable-track{height:4px;background:var(--bd);border-radius:4px}
+.level-slider input[type=range]{appearance:none;-webkit-appearance:none;display:block;width:100%;height:24px;margin:0;background:transparent;cursor:pointer;touch-action:pan-y;--level-fill:calc((var(--level-value, 2) - 1) / 3 * 100%)}
+.level-slider input[type=range]::-webkit-slider-runnable-track{height:4px;background:linear-gradient(to right,var(--ac) 0 var(--level-fill),var(--bd) var(--level-fill) 100%);border-radius:4px}
 .level-slider input[type=range]::-moz-range-track{height:4px;background:var(--bd);border-radius:4px}
+.level-slider input[type=range]::-moz-range-progress{height:4px;background:var(--ac);border-radius:4px}
 .level-slider input[type=range]::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;width:18px;height:18px;margin-top:-7px;border:0;border-radius:50%;background:var(--ac);box-shadow:0 1px 4px #0004}
 .level-slider input[type=range]::-moz-range-thumb{width:18px;height:18px;border:0;border-radius:50%;background:var(--ac);box-shadow:0 1px 4px #0004}
 .level-slider input[type=range]:focus-visible{outline:0}
