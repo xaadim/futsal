@@ -1,0 +1,7 @@
+node_modules/
+.wrangler/
+wrangler.generated.jsonc
+wrangler.migrate-dev.jsonc
+import.sql
+codes-joueurs.csv
+.dev.vars
