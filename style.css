@@ -205,6 +205,7 @@ body:not(.anon) #auth{display:none}
 .sheet{background:var(--card);width:100%;max-width:560px;margin:0 auto;border-radius:22px 22px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px))}
 .sheet h3{margin:0 0 4px;font:800 26px var(--f)}
 .sheet .pc{font-size:18px;padding:14px 18px}
+.sheet .csc{background:var(--tc);color:var(--tt);font-size:17px;padding:11px 16px}
 .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
 .kp{background:var(--bg);border-radius:14px;padding:10px;text-align:center}
 .kp b{display:block;font:800 34px/1 var(--f)}.kp span{color:var(--mu);font-size:13px}

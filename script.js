@@ -95,10 +95,10 @@ function setMode(){TEAMS=SESS&&SESS.teams?ALL.filter(t=>SESS.teams[t]):S.setup.t
   if(MODE==='host')fix()}
 function refresh(){setMode();renderAuth();renderWho();if(MODE!==prev){prev=MODE;lastBoard='';renderBoard();if(MODE==='host')drawT()}rebuild();renderSetup();renderAdmin();viewSync()}
 const gcount=a=>{const m={};a.forEach(x=>m[x]=(m[x]||0)+1);return Object.entries(m).map(([k,n])=>n>1?k+' ×'+n:k).join(', ')};
-function openPick(side){const t=S.cur[side],ps=(SESS&&SESS.teams&&SESS.teams[t])||[];
+function openPick(side){const t=S.cur[side],opponent=S.cur[side==='a'?'b':'a'],ps=(SESS&&SESS.teams&&SESS.teams[t])||[];
   if(!ps.length){addGoal(side,'',0);return}
   PICK=side;const el=$('#pick');
-  el.innerHTML=`<div class="sheet t-${t}"><h3>Qui a marqué pour ${TM[t]} ?</h3><div class="pl">${ps.map((p,i)=>`<button class="pc on t-${t}" data-gp="${i}">${esc(p)}</button>`).join('')}</div><div class="set"><button class="sm" data-gp="csc">Contre son camp</button><button class="sm" data-gp="x">Inconnu</button><button class="sm" id="pickx">Annuler</button></div></div>`;
+  el.innerHTML=`<div class="sheet t-${t}"><h3>Qui a marqué pour ${TM[t]} ?</h3><div class="pl">${ps.map((p,i)=>`<button class="pc on t-${t}" data-gp="${i}">${esc(p)}</button>`).join('')}</div><div class="set"><button class="sm csc t-${opponent}" data-gp="csc">⚽ Contre son camp</button></div><div class="set"><button class="sm" data-gp="x">Inconnu</button><button class="sm" id="pickx">Annuler</button></div></div>`;
   el.hidden=false}
 function closePick(){PICK=null;const el=$('#pick');if(el){el.hidden=true;el.innerHTML=''}}
 function addGoal(side,p,og){S.cur['s'+side]++;S.cur.goals.push({s:side,p,og:og?1:0});navigator.vibrate&&navigator.vibrate(20);closePick();ch()}
