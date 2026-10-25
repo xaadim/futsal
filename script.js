@@ -138,15 +138,11 @@ function val(){if(MODE!=='host')return;if(nSess()>=SESS.max){toast('Limite de '+
 /* ---- rendu ---- */
 function renderBoard(){let c=S.cur,G=S.cur.goals||[];if(MODE==='view'){const L=(SESS&&SESS.live)||{};c={a:L.a||TEAMS[0],b:L.b||TEAMS[1],sa:L.sa||0,sb:L.sb||0};G=L.g||[]}
   const dis=MODE==='view'?' disabled':'';
-  $('#board').innerHTML=['a','b'].map(k=>`<div class="side t-${c[k]}"><select data-sel="${k}"${dis} aria-label="Équipe">${TEAMS.map(x=>`<option value="${x}"${x===c[k]?' selected':''}>${TM[x]}</option>`).join('')}</select><div class="n">${c['s'+k]}</div><div class="gl">${esc(gcount(G.filter(g=>g.s===k).map(g=>g.og?'csc':(g.p||'?'))))}</div><button class="plus ctl" data-add="${k}">+1</button><button class="minus ctl" data-sub="${k}">−1</button></div>`).join('')}
-function renderBan(){const b=$('#ban');let h='';
-  if(SESS&&MODE!=='none'){const i='match '+Math.min(nSess()+1,SESS.max)+'/'+SESS.max;
-    h=MODE==='host'?`<span>Session en cours · ${i}</span><button class="sm" id="endS">Terminer</button>`:`<span>🔒 Session de <b>${esc(SESS.host_name||'?')}</b> · ${i}</span>${isAdmin()?'<button class="sm" id="unl">Débloquer</button>':''}`}
-  if(h!==lastBan){lastBan=h;b.innerHTML=h}}
+  $('#board').innerHTML=['a','b'].map(k=>{const team=c[k],players=(SESS&&SESS.teams&&SESS.teams[team])||[];return `<div class="side t-${team}"><select data-sel="${k}"${dis} aria-label="Équipe">${TEAMS.map(x=>`<option value="${x}"${x===team?' selected':''}>${TM[x]}</option>`).join('')}</select>${players.length?`<div class="team-players">${players.map(esc).join(' · ')}</div>`:''}<div class="n">${c['s'+k]}</div><div class="gl">${esc(gcount(G.filter(g=>g.s===k).map(g=>g.og?'csc':(g.p||'?'))))}</div><button class="plus ctl" data-add="${k}">+1</button><button class="minus ctl" data-sub="${k}">−1</button></div>`}).join('')}
 function renderAuth(){const el=$('#auth');if(ME){el.innerHTML='';return}
   if(!el.firstChild){el.innerHTML=`<div class="card empty" id="authwait">Vérification de l'installation…</div><div class="card" id="logincard" hidden><h2>Futsal Aytré</h2><p class="note" style="margin:0 0 12px">Entrez votre code d'activation personnel. Il n'est demandé qu'une seule fois sur ce téléphone.</p><div class="set"><input class="in" id="code" type="text" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="XXXXX-XXXXX" maxlength="14"><button id="login">Entrer</button></div><p class="note" id="autherr" role="alert"></p><p class="note">Pas de code ? Demandez-le à un admin du groupe.</p></div><div class="card" id="firstrun" hidden><h2>Première installation</h2><p class="note" style="margin:0 0 10px">Créez le compte administrateur. La clé d'installation est la valeur de SETUP_KEY dans Cloudflare.</p><div class="set"><input class="in" id="sk" type="password" placeholder="Clé d'installation" autocomplete="off"></div><div class="set"><input class="in" id="bn" type="text" maxlength="30" placeholder="Votre prénom"><button id="boot">Créer</button></div><p class="note" id="setuperr" role="alert"></p></div>`;
     api('setup').then(r=>{const w=$('#authwait'),l=$('#logincard'),f=$('#firstrun');if(w)w.hidden=true;if(l)l.hidden=!!r.needsAdmin;if(f)f.hidden=!r.needsAdmin}).catch(()=>{const w=$('#authwait');if(w)w.textContent='Vérification impossible. Rechargez la page pour réessayer.'})}}
-function renderWho(){const w=$('#who');if(w)w.innerHTML=ME?`<span>Connecté : <b>${esc(ME.name)}</b>${isAdmin()?' (admin)':''}</span><button class="sm" id="logout">Se déconnecter</button>`:''}
+function renderWho(){const w=$('#who');if(w)w.innerHTML=ME?`<details class="account-menu"><summary>Connecté : <b>${esc(ME.name)}</b>${isAdmin()?' (admin)':''}</summary><div class="account-pop"><button id="myStats">Mes statistiques</button><button id="logout">Se déconnecter</button></div></details>`:''}
 function renderSetup(){const el=$('#setup');if(MODE!=='none')return;let h='';
   if(ME&&!LOADED)h='<div class="card empty">Connexion…</div>';
   else if(ME){const tm=S.setup.teams,as=S.setup.assign,pres=PL.filter(p=>as[p]).length;
@@ -215,7 +211,7 @@ function renderSeason(){const ys=[...new Set(M.map(m=>dt(m).slice(0,4)).concat(t
 const api=(p,o={})=>fetch('/api/'+p,{credentials:'same-origin',...o,headers:{'Content-Type':'application/json'}}).then(async r=>{const t=await r.text();let b=null;try{b=t?JSON.parse(t):null}catch(e){}if(!r.ok){const e=new Error(r.status);e.status=r.status;e.body=b;throw e}return b});
 const post=(p,b)=>api(p,{method:'POST',body:JSON.stringify(b||{})});
 const patch=(p,b)=>api(p,{method:'PATCH',body:JSON.stringify(b||{})});
-function rebuild(){M=R.concat(S.pending);renderRank();renderHist();renderSeason();renderMe();renderBan();if(MODE==='host')drawT()}
+function rebuild(){M=R.concat(S.pending);renderRank();renderHist();renderSeason();renderMe();if(MODE==='host')drawT()}
 function syncStatus(){const n=S.pending.filter(m=>m.syncError).length,el=$('#sync');if(!el)return;
   el.innerHTML=n?`${n} match${n>1?'s':''} conservé${n>1?'s':''} localement · <button class="sm" id="retryMatches">Réessayer</button>`:'☁ Synchronisé'}
 async function pull(force){if(busy||document.hidden)return;busy=true;
@@ -243,10 +239,10 @@ async function pull(force){if(busy||document.hidden)return;busy=true;
 /* ---- événements ---- */
 document.addEventListener('click',e=>{if(e.target.id==='pick'){closePick();return}const b=e.target.closest('button');if(!b)return;const d=b.dataset;
   if(d.sessionView){document.querySelectorAll('.session-view').forEach(v=>v.hidden=v.id!=='session-'+d.sessionView);
-    document.querySelectorAll('[data-session-view]').forEach(t=>{const active=t===b;t.classList.toggle('on',active);t.setAttribute('aria-pressed',String(active))});scrollTo(0,0)}
+    document.querySelectorAll('[data-session-view]').forEach(t=>{const active=t.dataset.sessionView===d.sessionView;t.classList.toggle('on',active);t.setAttribute('aria-pressed',String(active))});scrollTo(0,0)}
   else if(d.tab){if(d.tab==='admin'&&!isAdmin())return;const pane=d.tab==='session'?'p-session':'p-'+d.tab;
     document.querySelectorAll('.pane').forEach(p=>p.hidden=p.id!==pane);
-    document.querySelectorAll('nav button').forEach(n=>n.classList.toggle('on',n===b));scrollTo(0,0)}
+    document.querySelectorAll('nav button').forEach(n=>n.classList.toggle('on',n===b));$('#session-dock').hidden=d.tab!=='session';scrollTo(0,0)}
   else if(d.add&&MODE==='host')openPick(d.add);
   else if(d.gp!==undefined)pickGoal(d.gp);
   else if(b.id==='pickx')closePick();
@@ -282,6 +278,7 @@ document.addEventListener('click',e=>{if(e.target.id==='pick'){closePick();retur
   else if(b.id==='cpall'){try{navigator.clipboard.writeText(IMPORTED.codes.map(c=>c.name+' : '+c.code).join('\n'));toast('Copié')}catch(err){}}
   else if(b.id==='hideimp'){IMPORTED=null;lastAdm='';renderAdmin()}
   else if(b.id==='logout')logout();
+  else if(b.id==='myStats'){document.querySelector('[data-tab="me"]').click()}
   else if(b.id==='addu')addUser();
   else if(b.id==='cpcode'){try{navigator.clipboard.writeText(NEWCODE.code);toast('Copié')}catch(err){}}
   else if(b.id==='hidecode'){NEWCODE=null;lastAdm='';renderAdmin()}});
@@ -293,7 +290,6 @@ document.addEventListener('change',e=>{const el=e.target,s=el.dataset.sel;
 document.addEventListener('keydown',e=>{if(e.key!=='Enter')return;if(e.target.id==='code')login();if(e.target.id==='nn')addUser()});
 
 /* ---- init ---- */
-$('#date').textContent=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
 $('#mm').value=Math.floor(S.dur/60);$('#ss').value=S.dur%60;
 $('#sync').textContent='Connexion…';
 {const v=$('#ver'),y=$('#cy');if(v)v.textContent='v'+(window.APP_VERSION||'');if(y)y.textContent=new Date().getFullYear()}
