@@ -85,7 +85,7 @@ function setMode(){TEAMS=SESS&&SESS.teams?ALL.filter(t=>SESS.teams[t]):S.setup.t
   document.body.classList.toggle('anon',!ME);document.body.classList.toggle('view',MODE==='view');
   $('#setup').hidden=MODE!=='none';$('#live').hidden=MODE==='none';
   const ta=$('#tabAdmin');if(ta)ta.hidden=!isAdmin();
-  const pa=$('#p-admin');if(pa){const leavingAdmin=!isAdmin()&&!pa.hidden;pa.hidden=!isAdmin();if(leavingAdmin){$('#p-session').hidden=false;document.querySelectorAll('nav button').forEach(n=>n.classList.toggle('on',n.dataset.tab==='session'))}}
+  const pa=$('#p-admin');if(pa&&!isAdmin()){const leavingAdmin=!pa.hidden;pa.hidden=true;if(leavingAdmin){$('#p-session').hidden=false;document.querySelectorAll('nav button').forEach(n=>n.classList.toggle('on',n.dataset.tab==='session'))}}
   if(MODE!=='host')closePick();
   if(MODE==='host')fix()}
 function refresh(){setMode();renderAuth();renderWho();if(MODE!==prev){prev=MODE;lastBoard='';renderBoard();if(MODE==='host')drawT()}rebuild();renderSetup();renderAdmin();viewSync()}
