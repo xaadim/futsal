@@ -48,8 +48,8 @@ function tick(){if(!T.run)return;T.rem=Math.max(0,(T.end-Date.now())/1000);
   if(T.rem<=0){T.run=false;T.done=true;clearInterval(iv);endBuzz();saveT();pushLive(true)}
   drawT()}
 function liveState(){const l=MODE==='host'?{...S.cur,run:T.run,started:T.started,done:T.done}:((SESS&&SESS.live)||{});return l||{}}
-function updateLiveTabs(){const l=liveState(),active=!!(SESS&&l.started),running=active&&!!l.run;
-  document.querySelectorAll('[data-session-view="match"],[data-session-view="rank"]').forEach(b=>{b.classList.toggle('live-active',active);b.classList.toggle('live-running',running);b.setAttribute('aria-label',(b.dataset.sessionView==='match'?'Match':'Classement')+(active?' : match en cours':''))})}
+function updateLiveTabs(){const l=liveState(),active=!!(SESS&&l.started);
+  const b=document.querySelector('[data-session-view="match"]');if(b){b.classList.toggle('live-active',active);b.setAttribute('aria-label','Match'+(active?' : match en cours':''))}}
 function drawT(t=T,d=S.dur){const c=$('#tc'),hb=t.run&&Date.now()<(t.hb||0);
   updateLiveTabs();
   $('#time').textContent=fmt(t.rem);$('#prog').style.width=Math.min(100,100*(1-t.rem/d))+'%';
@@ -106,6 +106,7 @@ function pickGoal(v){const side=PICK;if(!side)return;const ps=(SESS&&SESS.teams&
 async function startSession(){const tm=S.setup.teams,as=S.setup.assign;
   if(PL.some(p=>as[p]==='P')){toast('Placez tous les joueurs présents dans une équipe, ou touchez 🎲');return}
   const roster={};tm.forEach(t=>roster[t]=PL.filter(p=>as[p]===t));
+  if(!tm.every(t=>roster[t].length)){toast('Faites les équipes et placez au moins un joueur dans chaque équipe');return}
   const live={a:tm[0],b:tm[1],sa:0,sb:0,dur:S.dur,run:false,end:0,rem:S.dur,half:false,done:false,started:false};
   try{const r=await post('session/start',{teams:roster,date:today(),live});
     S.setup.assign={};S.cur={a:tm[0],b:tm[1],sa:0,sb:0,goals:[]};lastLive='';
@@ -176,7 +177,8 @@ function calc(L,teams){const r={};teams.forEach(t=>r[t]={t,j:0,v:0,n:0,l:0,gf:0,
 function renderRank(){const games=M.filter(m=>dt(m)===today()),live=liveState();
   if(SESS&&live.started&&live.a&&live.b){games.push({a:live.a,b:live.b,sa:+live.sa||0,sb:+live.sb||0,date:today()})}
   const L=calc(games,ALL).filter(x=>x.j);
-  $('#tb').innerHTML=L.length?'<tr><th></th><th>Équipe</th><th>J</th><th>Diff</th><th>Pts</th></tr>'+L.map((x,i)=>`<tr class="t-${x.t}"><td class="rk">${i+1}</td><td><i class="dot"></i>${TM[x.t]}</td><td>${x.j}</td><td>${sg(x.d)}</td><td class="pt">${x.p}</td></tr>`).join(''):'<tr><td class="empty">Aucun match aujourd\'hui.</td></tr>'}
+  const liveTeams=SESS&&live.started?[live.a,live.b]:[];
+  $('#tb').innerHTML=L.length?'<tr><th></th><th>Équipe</th><th>J</th><th>Diff</th><th>Pts</th></tr>'+L.map((x,i)=>{const playing=liveTeams.includes(x.t);return `<tr class="t-${x.t}${playing?' live-team':''}"><td class="rk">${i+1}${playing?'<span class="live-indicator" aria-label="Match en cours"></span>':''}</td><td><i class="dot"></i>${TM[x.t]}</td><td>${x.j}</td><td>${sg(x.d)}</td><td class="pt">${x.p}</td></tr>`}).join(''):'<tr><td class="empty">Aucun match aujourd\'hui.</td></tr>'}
 function renderHist(){const H=$('#hist'),E=M.map((m,i)=>[m,i]).filter(([m])=>dt(m)===today());
   if(!E.length){H.innerHTML='<div class="empty">Aucun match aujourd\'hui.<br>Validez un match pour le voir ici.</div>';return}
   H.innerHTML=E.map(([m,i],k)=>`<div class="h"><span class="no">${k+1}</span><span class="tm t-${m.a}"><i class="dot"></i>${TM[m.a]}</span><span class="sc">${m.sa} – ${m.sb}</span><span class="tm t-${m.b}"><i class="dot"></i>${TM[m.b]}</span>${isAdmin()&&m.id?`<button data-del="${i}" aria-label="Supprimer le match ${k+1}">✕</button>`:'<span></span>'}${gtxt(m)}</div>`).reverse().join('')}
@@ -211,8 +213,15 @@ function renderSeason(){const ys=[...new Set(M.map(m=>dt(m).slice(0,4)).concat(t
   const evs=Object.keys(by).sort().reverse().map(d=>({d,r:calc(by[d],ALL).filter(x=>x.j)}));
   evs.forEach(e=>{if(e.r.length)W[e.r[0].t]++});
   $('#sea').innerHTML=L.length?'<table class="cp"><tr><th></th><th>Équipe</th><th>J</th><th>V-N-D</th><th>Diff</th><th>Pts</th><th>Moy</th><th>🏅</th></tr>'+calc(L,ALL).filter(x=>x.j).map((x,i)=>`<tr class="t-${x.t}"><td class="rk">${i+1}</td><td><i class="dot"></i>${TM[x.t]}</td><td>${x.j}</td><td>${x.v}-${x.n}-${x.l}</td><td>${sg(x.d)}</td><td class="pt">${x.p}</td><td>${x.j?(x.p/x.j).toFixed(2):'–'}</td><td>${W[x.t]}</td></tr>`).join('')+`</table><p class="note">${L.length} matchs sur ${evs.length} soirées. Moy : points par match. 🏅 : soirées gagnées.</p>`:`<div class="empty">Aucun match en ${YR}.</div>`;
+  renderSessionRank(L);
   renderPlayers(L);
   $('#evs').innerHTML=evs.length?evs.map(e=>`<div class="ev"><b>${new Date(e.d+'T12:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}</b><span class="w t-${e.r[0].t}"><i class="dot"></i>${TM[e.r[0].t]}</span><small>${e.r.map(x=>TM[x.t]+' '+x.p).join(', ')}</small></div>`).join(''):''}
+function renderSessionRank(L){const sessions=SA.filter(s=>String(s.date||'').startsWith(YR)).sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id),select=$('#sessionSelect'),out=$('#sessionRank');if(!select||!out)return;
+  const previous=select.value;select.innerHTML=sessions.map(s=>`<option value="${s.id}">${new Date(s.date+'T12:00').toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})} · ${s.status==='active'?'En cours':'Terminée'}</option>`).join('');
+  if(!sessions.length){out.innerHTML='<div class="empty">Aucune session cette saison.</div>';return}
+  const selected=sessions.find(s=>String(s.id)===previous)||sessions[0];select.value=selected.id;
+  const matches=L.filter(m=>m.session_id===selected.id),rows=calc(matches,ALL).filter(x=>x.j);
+  out.innerHTML=rows.length?'<table class="cp"><tr><th></th><th>Équipe</th><th>J</th><th>V-N-D</th><th>Diff</th><th>Pts</th></tr>'+rows.map((x,i)=>`<tr class="t-${x.t}"><td class="rk">${i+1}</td><td><i class="dot"></i>${TM[x.t]}</td><td>${x.j}</td><td>${x.v}-${x.n}-${x.l}</td><td>${sg(x.d)}</td><td class="pt">${x.p}</td></tr>`).join('')+'</table>':'<div class="empty">Aucun match enregistré pour cette session.</div>'}
 
 /* ---- API ---- */
 const api=(p,o={})=>fetch('/api/'+p,{credentials:'same-origin',...o,headers:{'Content-Type':'application/json'}}).then(async r=>{const t=await r.text();let b=null;try{b=t?JSON.parse(t):null}catch(e){}if(!r.ok){const e=new Error(r.status);e.status=r.status;e.body=b;throw e}return b});
@@ -291,6 +300,7 @@ document.addEventListener('click',e=>{if(e.target.id==='pick'){closePick();retur
   else if(b.id==='hidecode'){NEWCODE=null;lastAdm='';renderAdmin()}});
 document.addEventListener('change',e=>{const el=e.target,s=el.dataset.sel;
   if(el.id==='yr'){YR=el.value;renderSeason();renderMe()}
+  else if(el.id==='sessionSelect')renderSessionRank(M.filter(m=>dt(m).startsWith(YR)));
   else if(el.dataset.lv)patch('users/'+el.dataset.lv,{level:+el.value}).then(()=>pull(true)).catch(()=>toast('Action refusée'));
   else if(s&&MODE==='host'){const o=s==='a'?'b':'a';if(el.value===S.cur[o])S.cur[o]=S.cur[s];S.cur[s]=el.value;S.cur.goals.forEach(g=>{g.p=''});ch()}
   else if(el.id==='mm'||el.id==='ss'){S.dur=Math.max(10,((+$('#mm').value||0)*60)+(+$('#ss').value||0));save();if(!T.started)rst();else{drawT();pushLive(true)}}});

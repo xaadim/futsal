@@ -143,7 +143,7 @@ async function route(req, env, u, p) {
         const ks = Object.keys(tm);
         const date = typeof b.date === 'string' && /^\d{4}-\d\d-\d\d$/.test(b.date)
           ? new Date(`${b.date}T00:00:00Z`) : null;
-        if (ks.length < 2 || ks.length > 3 || ks.some((k) => !TEAMS.includes(k)) ||
+        if (ks.length < 2 || ks.length > 3 || ks.some((k) => !TEAMS.includes(k) || !Array.isArray(tm[k]) || tm[k].length === 0) ||
           !date || !Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== b.date) return bad(400, 'equipes');
         if (ks.some((k) => !Array.isArray(tm[k]) || tm[k].length > 30 ||
           tm[k].some((name) => typeof name !== 'string' || !name.trim() || name.trim().length > 30))) return bad(400, 'joueurs');
