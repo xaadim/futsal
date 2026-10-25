@@ -30,7 +30,7 @@ function endBuzz(){for(let i=0;i<3;i++){const t=i*1.3;tone(220,t,1.05,'sawtooth'
 
 /* ---- chrono (géré par l'organisateur de la session) ---- */
 function saveT(){S.timer=(SESS&&isHost())?{sid:SESS.id,run:T.run,end:T.end,rem:T.rem,half:T.half,done:T.done,started:T.started}:null;save()}
-function rst(){clearInterval(iv);T={run:false,rem:S.dur,end:0,half:false,done:false,started:false,hb:0};saveT();drawT();pushLive(true)}
+function rst(){clearInterval(iv);T={run:false,rem:S.dur,end:0,half:false,done:false,started:false,hb:0};saveT();drawT();renderRank();pushLive(true)}
 function restoreT(){const t=S.timer;
   if(MODE==='host'&&t&&SESS&&t.sid===SESS.id){clearInterval(iv);T={run:false,rem:t.rem,end:0,half:!!t.half,done:!!t.done,started:!!t.started,hb:0};
     if(t.run){const rem=(t.end-Date.now())/1000;
@@ -42,12 +42,16 @@ document.addEventListener('pointerdown',lock);
 function go(){au();if(T.done)return;
   if(T.run){T.rem=Math.max(0,(T.end-Date.now())/1000);T.run=false;clearInterval(iv)}
   else{T.run=true;T.started=true;T.end=Date.now()+T.rem*1000;lock();iv=setInterval(tick,100)}
-  saveT();drawT();pushLive(true)}
+  saveT();drawT();renderRank();pushLive(true)}
 function tick(){if(!T.run)return;T.rem=Math.max(0,(T.end-Date.now())/1000);
   if(!T.half&&T.rem<=S.dur/2){T.half=true;T.hb=Date.now()+4000;halfBeep();saveT();pushLive(true)}
   if(T.rem<=0){T.run=false;T.done=true;clearInterval(iv);endBuzz();saveT();pushLive(true)}
   drawT()}
+function liveState(){const l=MODE==='host'?{...S.cur,run:T.run,started:T.started,done:T.done}:((SESS&&SESS.live)||{});return l||{}}
+function updateLiveTabs(){const l=liveState(),active=!!(SESS&&l.started),running=active&&!!l.run;
+  document.querySelectorAll('[data-session-view="match"],[data-session-view="rank"]').forEach(b=>{b.classList.toggle('live-active',active);b.classList.toggle('live-running',running);b.setAttribute('aria-label',(b.dataset.sessionView==='match'?'Match':'Classement')+(active?' : match en cours':''))})}
 function drawT(t=T,d=S.dur){const c=$('#tc'),hb=t.run&&Date.now()<(t.hb||0);
+  updateLiveTabs();
   $('#time').textContent=fmt(t.rem);$('#prog').style.width=Math.min(100,100*(1-t.rem/d))+'%';
   $('#ph').textContent=t.done?'TEMPS ÉCOULÉ !':hb?'🔔 MI-TEMPS':!t.started?(MODE==='view'?'En attente du coup d\'envoi':'Prêt, mi-temps à '+fmt(d/2)):!t.run?'En pause':t.half?'2e mi-temps':'1re mi-temps';
   c.classList.toggle('end',!!t.done);c.classList.toggle('hb',hb);
@@ -66,7 +70,7 @@ async function pushLive(force){if(MODE!=='host'||!SESS)return;if(pushing){if(for
   pushing=false;if(dirty){dirty=false;pushLive(true)}}
 function viewSync(){if(MODE!=='view'||!SESS)return;const L=SESS.live||{},d=L.dur||390,rem=L.run?Math.max(0,(L.end-Date.now())/1000):(L.rem==null?d:L.rem);
   drawT({run:L.run&&rem>0,rem,half:L.half,done:L.done||(L.run&&rem<=0),started:L.started,hb:0},d);
-  const k=[L.a,L.b,L.sa,L.sb,JSON.stringify(L.g||[])].join();if(k!==lastBoard){lastBoard=k;renderBoard()}}
+  const k=[L.a,L.b,L.sa,L.sb,JSON.stringify(L.g||[])].join();if(k!==lastBoard){lastBoard=k;renderBoard();renderRank()}}
 
 /* ---- helpers ---- */
 function two(b,fn,lbl){if(b.dataset.arm){clearTimeout(+b.dataset.arm);delete b.dataset.arm;b.textContent=b.dataset.o;b.classList.remove('arm');fn()}
@@ -77,7 +81,7 @@ function fix(){const c=S.cur;let a=c.a,b=c.b;
   if(!TEAMS.includes(a))a=TEAMS.find(t=>t!==b);
   if(!TEAMS.includes(b))b=TEAMS.find(t=>t!==a);
   if(a===b)b=TEAMS.find(t=>t!==a);c.a=a;c.b=b}
-const ch=()=>{save();renderBoard();pushLive(true)};
+const ch=()=>{save();renderBoard();renderRank();pushLive(true)};
 
 /* ---- session ---- */
 function setMode(){TEAMS=SESS&&SESS.teams?ALL.filter(t=>SESS.teams[t]):S.setup.teams;
@@ -157,18 +161,21 @@ ${tm.map(t=>{const n=PL.filter(p=>as[p]===t);return `<div class="ro t-${t}"><b>$
 function renderAdmin(){const el=$('#adm');if(!el)return;if(!isAdmin()){el.replaceChildren();return}let h='';
   if(isAdmin()){
     const nc=NEWCODE?`<div class="card code"><div>Code de <b>${esc(NEWCODE.name||'')}</b></div><div class="big">${esc(NEWCODE.code)}</div><p class="note">À lui transmettre maintenant. Il ne sera plus affiché.</p><div class="set"><button class="sm" id="cpcode">Copier</button><button class="sm" id="hidecode">J'ai noté le code</button></div></div>`:'';
-    const lv=(n)=>[1,2,3,4,5].map(x=>`<option${x===n?' selected':''}>${x}</option>`).join('');
+    const levels=['Débutant','À l’aise','Avancé','Pro'];
+    const levelSlider=(value,attrs)=>`<div class="level-slider"><input type="range" min="1" max="4" step="1" value="${Math.min(4,Math.max(1,Number(value)||3))}" ${attrs}><div class="level-labels">${levels.map((label,i)=>`<span>${label}</span>`).join('')}</div></div>`;
     const imp=IMPORTED?`<div class="card code"><h2>Codes des joueurs repris</h2><p class="note">${IMPORTED.stats.matchs} matchs repris. À transmettre maintenant : ces codes ne seront plus affichés.</p>${IMPORTED.codes.map(c=>`<div class="ur"><b>${esc(c.name)}</b><span class="big" style="font-size:26px">${esc(c.code)}</span></div>`).join('')}<div class="set"><button class="sm" id="cpall">Copier la liste</button><button class="sm" id="hideimp">J'ai noté les codes</button></div></div>`:'';
     const importCard=CAN_IMPORT_SUPABASE?`<div class="card"><h2>Historique Supabase</h2><p class="note" style="margin:0 0 10px">Reprend les joueurs, sessions et matchs de l'ancienne base. Possible une seule fois, sur une base sans match.</p><button id="imp">Importer l'historique Supabase</button></div>`:'';
-    h=nc+imp+`<div class="card"><h2>Nouveau joueur</h2><div class="set"><input class="in" id="nn" type="text" maxlength="30" placeholder="Prénom"></div><div class="set"><label>Niveau</label><select class="sel" id="nl">${lv(3)}</select><label><input type="checkbox" id="na"> Admin</label><button id="addu">Créer</button></div><p class="note">Niveau de 1 (débutant) à 5 (très fort). Un code d'activation unique est généré pour ce joueur.</p></div>
+    h=nc+imp+`<div class="card"><h2>Nouveau joueur</h2><div class="set"><input class="in" id="nn" type="text" maxlength="30" placeholder="Prénom"></div><div class="level-field"><label for="nl">Niveau</label>${levelSlider(3,'id="nl" aria-label="Niveau du nouveau joueur"')}</div><div class="set"><label><input type="checkbox" id="na"> Admin</label><button id="addu">Créer</button></div><p class="note">Un code d'activation unique est généré pour ce joueur.</p></div>
 ${importCard}
-<div class="card"><h2>Joueurs (${USERS.length})</h2>${USERS.map(u=>`<div class="ur"><b>${esc(u.name)}${u.role==='admin'?' <span class="badge">admin</span>':''}</b><label>Niveau <select class="sel" data-lv="${u.id}">${lv(u.level)}</select></label><button class="sm" data-nc="${u.id}">Nouveau code</button>${u.id===ME.id?'':`<button class="sm" data-adm="${u.id}">${u.role==='admin'?'Retirer admin':'Passer admin'}</button><button class="sm" data-du="${u.id}" aria-label="Supprimer ${esc(u.name)}">✕</button>`}</div>`).join('')||'<div class="empty">Aucun joueur.</div>'}</div>`}
+  <div class="card"><h2>Joueurs (${USERS.length})</h2>${USERS.map(u=>`<div class="ur"><b>${esc(u.name)}${u.role==='admin'?' <span class="badge">admin</span>':''}</b><div class="level-field"><label for="level-${u.id}">Niveau</label>${levelSlider(u.level,`id="level-${u.id}" data-lv="${u.id}" aria-label="Niveau de ${esc(u.name)}"`)}</div><button class="sm" data-nc="${u.id}">Nouveau code</button>${u.id===ME.id?'':`<button class="sm" data-adm="${u.id}">${u.role==='admin'?'Retirer admin':'Passer admin'}</button><button class="sm" data-du="${u.id}" aria-label="Supprimer ${esc(u.name)}">✕</button>`}</div>`).join('')||'<div class="empty">Aucun joueur.</div>'}</div>`}
   if(h!==lastAdm){lastAdm=h;el.innerHTML=h}}
 function calc(L,teams){const r={};teams.forEach(t=>r[t]={t,j:0,v:0,n:0,l:0,gf:0,ga:0,d:0,p:0});
   L.forEach(m=>{const A=r[m.a],B=r[m.b];if(!A||!B)return;A.j++;B.j++;A.gf+=m.sa;B.gf+=m.sb;A.d+=m.sa-m.sb;B.d+=m.sb-m.sa;
     if(m.sa>m.sb){A.v++;B.l++;A.p+=3}else if(m.sb>m.sa){B.v++;A.l++;B.p+=3}else{A.n++;B.n++;A.p++;B.p++}});
   return Object.values(r).sort((x,y)=>y.p-x.p||y.d-x.d||y.gf-x.gf)}
-function renderRank(){const L=calc(M.filter(m=>dt(m)===today()),ALL).filter(x=>x.j);
+function renderRank(){const games=M.filter(m=>dt(m)===today()),live=liveState();
+  if(SESS&&live.started&&live.a&&live.b){games.push({a:live.a,b:live.b,sa:+live.sa||0,sb:+live.sb||0,date:today()})}
+  const L=calc(games,ALL).filter(x=>x.j);
   $('#tb').innerHTML=L.length?'<tr><th></th><th>Équipe</th><th>J</th><th>Diff</th><th>Pts</th></tr>'+L.map((x,i)=>`<tr class="t-${x.t}"><td class="rk">${i+1}</td><td><i class="dot"></i>${TM[x.t]}</td><td>${x.j}</td><td>${sg(x.d)}</td><td class="pt">${x.p}</td></tr>`).join(''):'<tr><td class="empty">Aucun match aujourd\'hui.</td></tr>'}
 function renderHist(){const H=$('#hist'),E=M.map((m,i)=>[m,i]).filter(([m])=>dt(m)===today());
   if(!E.length){H.innerHTML='<div class="empty">Aucun match aujourd\'hui.<br>Validez un match pour le voir ici.</div>';return}

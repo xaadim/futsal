@@ -21,7 +21,7 @@ const cookie = (t, age) => `fsid=${t}; Path=/; Max-Age=${age}; HttpOnly; Secure;
 const J = (o, s = 200, h = {}) =>
   new Response(JSON.stringify(o), { status: s, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...h } });
 const bad = (s, e) => J({ error: e }, s);
-const lvl = (x) => Math.min(5, Math.max(1, parseInt(x, 10) || 3));
+const lvl = (x) => Math.min(4, Math.max(1, parseInt(x, 10) || 3));
 
 export default {
   async fetch(req, env) {

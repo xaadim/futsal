@@ -1,4 +1,4 @@
-// Répartit des joueurs (avec un niveau de 1 à 5) en k équipes de force équivalente.
+// Répartit des joueurs (avec un niveau de 1 à 4) en k équipes de force équivalente.
 // Recherche aléatoire + améliorations par échanges : chaque appel donne un tirage différent,
 // choisi parmi les meilleures répartitions trouvées.
 const shuffle = (a, r) => {
