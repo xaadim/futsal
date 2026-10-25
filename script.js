@@ -259,7 +259,7 @@ document.addEventListener('click',e=>{if(e.target.id==='pick'){closePick();retur
     document.querySelectorAll('[data-session-view]').forEach(t=>{const active=t.dataset.sessionView===d.sessionView;t.classList.toggle('on',active);t.setAttribute('aria-pressed',String(active))});scrollTo(0,0)}
   else if(d.tab){if(d.tab==='admin'&&!isAdmin())return;const pane=d.tab==='session'?'p-session':'p-'+d.tab;
     document.querySelectorAll('.pane').forEach(p=>p.hidden=p.id!==pane);
-    document.querySelectorAll('nav button').forEach(n=>n.classList.toggle('on',n===b));$('#session-dock').hidden=d.tab!=='session';scrollTo(0,0)}
+    document.querySelectorAll('nav button').forEach(n=>n.classList.toggle('on',n===b));$('#session-dock').hidden=d.tab!=='session'||MODE==='none';scrollTo(0,0)}
   else if(d.add&&MODE==='host')openPick(d.add);
   else if(d.gp!==undefined)pickGoal(d.gp);
   else if(b.id==='pickx')closePick();
