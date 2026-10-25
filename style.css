@@ -156,7 +156,9 @@ body:not(.anon) #auth{display:none}
 @media(max-width:420px){header{flex-wrap:nowrap;gap:4px}.brand{gap:5px}h1{font-size:clamp(20px,6vw,25px)}#who{max-width:45%;font-size:11px}}
 @media(max-width:560px){
 	main{padding:8px 12px 118px}
-	.session-switch{margin-bottom:8px}
+	.session-switch{margin-bottom:8px;grid-template-columns:repeat(3,minmax(0,1fr))}
+	.session-switch button{min-width:0;min-height:48px;padding:5px 2px;gap:2px;flex-direction:column;white-space:normal;line-height:1.1;text-align:center;overflow-wrap:anywhere}
+	.session-switch button span{flex:none;line-height:1}
 	#tc.card{padding:10px 12px;margin-bottom:8px;border-radius:16px}
 	#time{font-size:clamp(82px,27vw,116px);line-height:.95;margin:2px 0 8px}
 	.bar{height:7px;margin-bottom:8px}
@@ -195,7 +197,7 @@ body:not(.anon) #auth{display:none}
 	#board .minus{font-size:12px;padding:4px;border-radius:7px}
 	.val.ctl{font-size:16px;padding:7px 10px;margin-bottom:6px}
 }
-@media(max-width:360px){header{gap:2px}.brand{gap:3px}.brand .logo{width:26px;font-size:22px}h1{font-size:20px}#who{font-size:10px;max-width:43%}.session-switch{gap:2px;padding:3px}.session-switch button{gap:3px;padding:7px 2px;font-size:14px}}
+@media(max-width:360px){header{gap:2px}.brand{gap:3px}.brand .logo{width:26px;font-size:22px}h1{font-size:20px}#who{font-size:10px;max-width:43%}.session-switch{gap:2px;padding:3px}.session-switch button{min-height:46px;gap:2px;padding:4px 1px;font-size:12px}.session-switch button span{font-size:16px}}
 
 /* buteurs et stats */
 .gl{font-size:14px;font-weight:600;min-height:20px;opacity:.85;overflow-wrap:anywhere}
