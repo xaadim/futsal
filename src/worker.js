@@ -1,5 +1,6 @@
 import { balance } from './balance.js';
 import { buildImport, fetchSupabase } from './import.js';
+import { dateInParis, mondayOnOrAfter, nextLaundryDate } from './laundry.js';
 
 // Supabase (clés publiques) : surchargeables par les variables SUPABASE_URL / SUPABASE_KEY
 const SB_URL = 'https://fuaihkklnygbbiketvjb.supabase.co';
@@ -116,13 +117,68 @@ async function route(req, env, u, p) {
       if (u.searchParams.get('v') === String(v)) return J({ v, same: true, canImportSupabase });
       const users = (await q('SELECT id, name, role, level FROM users ORDER BY name COLLATE NOCASE').all()).results
         .map((x) => (admin ? x : { id: x.id, name: x.name }));
+      const rotation = await q('SELECT id, start_date, next_date FROM laundry_rotation WHERE id = 1').first();
+      const laundryQueue = rotation ? (await q(
+        'SELECT q.user_id id, u.name FROM laundry_queue q JOIN users u ON u.id = q.user_id ORDER BY q.position').all()).results : [];
+      const laundryEvents = rotation ? (await q(
+        'SELECT date, user_id, name, action, actor_name FROM laundry_events WHERE date >= ? ORDER BY date', rotation.start_date).all()).results : [];
       const sessions = (await q(
         "SELECT s.id, s.date, s.host_user, u.name host_name, s.teams, CASE WHEN s.status = 'active' THEN s.live END live, s.status, s.max " +
         'FROM sessions s LEFT JOIN users u ON u.id = s.host_user ORDER BY s.id').all()).results
         .map((s) => ({ ...s, teams: JSON.parse(s.teams), live: s.live ? JSON.parse(s.live) : null }));
       const matches = (await q('SELECT id, ts, date, a, b, sa, sb, session_id FROM matches ORDER BY ts').all()).results;
       const goals = (await q('SELECT match_id, team, player p, own_goal og FROM goals ORDER BY id').all()).results;
-      return J({ v, me, users, sessions, matches, goals, canImportSupabase });
+      return J({ v, me, users, sessions, matches, goals, canImportSupabase,
+        laundry: rotation ? { rotation, queue: laundryQueue, events: laundryEvents } : null });
+    }
+
+    if (r === 'laundry' && m === 'POST') {
+      const b = await body();
+      if (p[2] === 'init') {
+        if (!admin) return bad(403, 'admin');
+        const firstId = Number(b.firstUserId);
+        const players = (await q('SELECT id FROM users ORDER BY id').all()).results.map((x) => x.id);
+        if (!Number.isSafeInteger(firstId) || !players.includes(firstId)) return bad(400, 'joueur');
+        const startDate = mondayOnOrAfter(dateInParis(new Date()));
+        const queue = [firstId, ...players.filter((id) => id !== firstId)];
+        try {
+          await DB.batch([
+            q('INSERT INTO laundry_rotation (id, start_date, next_date, created_by) VALUES (1, ?, ?, ?)', startDate, startDate, me.id),
+            ...queue.map((id, position) => q('INSERT INTO laundry_queue (position, user_id) VALUES (?, ?)', position, id)),
+            bump(),
+          ]);
+        } catch (e) {
+          if (await q('SELECT 1 x FROM laundry_rotation WHERE id = 1').first()) return bad(409, 'deja-initialisee');
+          throw e;
+        }
+        return J({ ok: 1, startDate });
+      }
+      if (p[2] === 'action') {
+        if (b.action !== 'done' && b.action !== 'skip') return bad(400, 'action');
+        const rotation = await q('SELECT next_date FROM laundry_rotation WHERE id = 1').first();
+        if (!rotation) return bad(409, 'non-initialisee');
+        const current = await q(
+          'SELECT q.user_id id, u.name FROM laundry_queue q JOIN users u ON u.id = q.user_id ORDER BY q.position LIMIT 1').first();
+        if (!current) return bad(409, 'aucun-joueur');
+        const today = dateInParis(new Date());
+        if (rotation.next_date > today) return bad(409, 'pas-encore');
+        const tail = (await q('SELECT COALESCE(MAX(position) + 1, 0) position FROM laundry_queue').first()).position;
+        try {
+          await DB.batch([
+            q('INSERT INTO laundry_events (date, user_id, name, action, actor_id, actor_name, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+              rotation.next_date, current.id, current.name, b.action, me.id, me.name, Date.now()),
+            q('UPDATE laundry_rotation SET next_date = ? WHERE id = 1 AND next_date = ?',
+              nextLaundryDate(rotation.next_date), rotation.next_date),
+            q('DELETE FROM laundry_queue WHERE user_id = ?', current.id),
+            q('INSERT INTO laundry_queue (position, user_id) VALUES (?, ?)', tail, current.id),
+            bump(),
+          ]);
+        } catch (e) {
+          if (await q('SELECT 1 x FROM laundry_events WHERE date = ?', rotation.next_date).first()) return bad(409, 'tour-deja-traite');
+          throw e;
+        }
+        return J({ ok: 1, action: b.action, name: current.name });
+      }
     }
 
     // Générateur d'équipes équilibrées (les niveaux restent côté serveur)
@@ -258,6 +314,7 @@ async function route(req, env, u, p) {
           const x = await DB.batch([
             q('INSERT INTO users (name, role, level, code_hash, created_at) VALUES (?, ?, ?, ?, ?)',
               name, b.role === 'admin' ? 'admin' : 'player', lvl(b.level), await sha(norm(code)), Date.now()),
+            q('INSERT INTO laundry_queue (position, user_id) SELECT COALESCE((SELECT MAX(position) + 1 FROM laundry_queue), 0), (SELECT id FROM users WHERE name = ?) WHERE EXISTS (SELECT 1 FROM laundry_rotation WHERE id = 1)', name),
             bump(),
           ]);
           return J({ id: x[0].meta.last_row_id, name, code });
