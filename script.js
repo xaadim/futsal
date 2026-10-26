@@ -63,7 +63,8 @@ function drawT(t=T,d=S.dur){const c=$('#tc'),hb=t.run&&Date.now()<(t.hb||0);
   const g=$('#go'),v=$('#val'),n=nSess(),mx=SESS.max,full=n>=mx;
   g.textContent=t.done?'Terminé':t.run?'⏸ Pause':t.started?'▶ Reprendre':'▶ Démarrer';g.disabled=t.done||full;
   v.classList.toggle('pulse',t.done);v.disabled=full;
-  if(!v.dataset.arm)v.textContent=full?'Session terminée ('+mx+' matchs)':'✓ Valider le match ('+(n+1)+'/'+mx+')'}
+  if(!v.dataset.arm)v.textContent=full?'Session terminée ('+mx+' matchs)':'✓ Valider le match ('+(n+1)+'/'+mx+')';
+  const end=$('#endS');if(end)end.hidden=MODE!=='host'||!SESS}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){lock();if(T.run)tick();pull()}});
 
 /* ---- live : l'organisateur publie, les autres regardent ---- */
@@ -118,7 +119,7 @@ async function startSession(){const tm=S.setup.teams,as=S.setup.assign;
     SESS={id:r.id,date:today(),host_user:ME.id,host_name:ME.name,teams:roster,live,status:'active',max:12};S.cache=SESS;save();
     refresh();rst();toast('Session démarrée')}
   catch(e){toast(e.status===409?'Une session est déjà en cours':'Impossible de démarrer : vérifiez la connexion');pull(true)}}
-function endSess(){post('session/end',{id:SESS.id}).then(()=>{toast('Session terminée');pull(true)}).catch(()=>toast('Action refusée'))}
+function endSess(){if(MODE!=='host'||!SESS)return;post('session/end',{id:SESS.id}).then(()=>{S.timer=null;save();toast('Session terminée · vous pouvez en démarrer une nouvelle');pull(true)}).catch(()=>toast('Action refusée'))}
 async function gen(){const as=S.setup.assign,names=PL.filter(p=>as[p]),tm=S.setup.teams;
   if(names.length<tm.length){toast('Pas assez de joueurs présents');return}
   try{const r=await post('teams/generate',{names,k:tm.length});
