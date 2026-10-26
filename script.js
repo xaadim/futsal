@@ -9,7 +9,7 @@ let S=Object.assign({dur:390,cur:{a:'jaune',b:'orange',sa:0,sb:0},pending:[],set
 if(!S.setup||!S.setup.teams)S.setup={teams:['jaune','orange','vert'],assign:{}};
 if(S.setup.teams.length>3)S.setup.teams=S.setup.teams.slice(0,3);
 if(!S.cur.goals)S.cur.goals=[];
-let T,iv,wl,YR,R=[],M=[],SA=[],PL=[],USERS=[],LOADED=false,MODE='none',prev='',VER=0,busy=false,lastLive='',pushing=false,dirty=false,lastBoard='',lastBan='',lastSetup='',lastAdm='',NEWCODE=null,PICK=null,IMPORTED=null,autoValidateTimer=null,lastActivity=Date.now(),hostLiveKey='';
+let T,iv,wl,YR,R=[],M=[],SA=[],PL=[],USERS=[],LOADED=false,MODE='none',prev='',VER=0,busy=false,lastLive='',pushing=false,dirty=false,lastBoard='',lastBan='',lastSetup='',lastAdm='',NEWCODE=null,PICK=null,IMPORTED=null,hostLiveKey='';
 let ME=S.me,SESS=(ME&&S.cache&&S.cache.host_user===ME.id)?S.cache:null,TEAMS=S.setup.teams,CAN_IMPORT_SUPABASE=false,LEVEL_CHANGES={},LEVEL_TAPS=new WeakMap();
 const isHost=()=>!!(SESS&&ME&&SESS.host_user===ME.id),isAdmin=()=>!!(ME&&ME.role==='admin');
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
@@ -30,26 +30,22 @@ function endBuzz(){for(let i=0;i<3;i++){const t=i*1.3;tone(220,t,1.05,'sawtooth'
 
 /* ---- chrono (géré par l'organisateur de la session) ---- */
 function saveT(){S.timer=(SESS&&isHost())?{sid:SESS.id,run:T.run,end:T.end,rem:T.rem,half:T.half,done:T.done,started:T.started}:null;save()}
-function cancelAutoValidate(){clearTimeout(autoValidateTimer);autoValidateTimer=null}
-function scheduleAutoValidate(){cancelAutoValidate();if(MODE!=='host'||!T.done)return;autoValidateTimer=setTimeout(()=>{if(MODE==='host'&&T.done&&Date.now()-lastActivity>=10000)val();else scheduleAutoValidate()},Math.max(0,10000-(Date.now()-lastActivity)))}
-function markActivity(){lastActivity=Date.now();if(T&&T.done)scheduleAutoValidate()}
-function rst(){cancelAutoValidate();clearInterval(iv);T={run:false,rem:S.dur,end:0,half:false,done:false,started:false,hb:0};saveT();drawT();renderRank();pushLive(true)}
+function rst(){clearInterval(iv);T={run:false,rem:S.dur,end:0,half:false,done:false,started:false,hb:0};saveT();drawT();renderRank();pushLive(true)}
 function restoreT(){const t=S.timer;
   if(MODE==='host'&&t&&SESS&&t.sid===SESS.id){clearInterval(iv);T={run:false,rem:t.rem,end:0,half:!!t.half,done:!!t.done,started:!!t.started,hb:0};
     if(t.run){const rem=(t.end-Date.now())/1000;
-      if(rem>0){T.run=true;T.end=t.end;T.rem=rem;iv=setInterval(tick,100)}else{T.rem=0;T.done=true;T.half=true;lastActivity=Date.now()}}
-    saveT();drawT();pushLive(true);if(T.done)scheduleAutoValidate()}
+      if(rem>0){T.run=true;T.end=t.end;T.rem=rem;iv=setInterval(tick,100)}else{T.rem=0;T.done=true;T.half=true}}
+    saveT();drawT();pushLive(true)}
   else rst()}
 async function lock(){try{if(wl)return;wl=await navigator.wakeLock.request('screen');wl.addEventListener('release',()=>{wl=null})}catch(e){wl=null}}
-document.addEventListener('pointerdown',()=>{lock();markActivity()});
-document.addEventListener('keydown',markActivity);
+document.addEventListener('pointerdown',lock);
 function go(){au();if(T.done)return;
   if(T.run){T.rem=Math.max(0,(T.end-Date.now())/1000);T.run=false;clearInterval(iv)}
   else{T.run=true;T.started=true;T.end=Date.now()+T.rem*1000;lock();iv=setInterval(tick,100)}
   saveT();drawT();renderRank();pushLive(true)}
 function tick(){if(!T.run)return;T.rem=Math.max(0,(T.end-Date.now())/1000);
   if(!T.half&&T.rem<=S.dur/2){T.half=true;T.hb=Date.now()+4000;halfBeep();saveT();pushLive(true)}
-  if(T.rem<=0){T.run=false;T.done=true;clearInterval(iv);endBuzz();saveT();pushLive(true);lastActivity=Date.now();scheduleAutoValidate()}
+  if(T.rem<=0){T.run=false;T.done=true;clearInterval(iv);endBuzz();saveT();pushLive(true)}
   drawT()}
 function liveState(){const l=MODE==='host'?{...S.cur,run:T.run,started:T.started,done:T.done}:((SESS&&SESS.live)||{});return l||{}}
 function updateLiveTabs(){const l=liveState(),active=!!(SESS&&l.started);
@@ -105,7 +101,7 @@ function syncHostLive(){if(MODE!=='host'||!SESS||!SESS.live)return;const l=SESS.
   S.cur={a:l.a||TEAMS[0],b:l.b||TEAMS[1],sa:+l.sa||0,sb:+l.sb||0,goals:Array.isArray(l.g)?l.g:[]};fix();
   clearInterval(iv);const rem=l.run?Math.max(0,(l.end-Date.now())/1000):Math.max(0,Number(l.rem??l.dur??S.dur));
   T={run:!!l.run&&rem>0,rem,end:l.run?l.end:0,half:!!l.half,done:!!l.done||!!l.run&&rem<=0,started:!!l.started,hb:0};
-  if(T.run)iv=setInterval(tick,100);else if(T.done)scheduleAutoValidate();else cancelAutoValidate();saveT();lastBoard='';renderBoard();drawT()}
+  if(T.run)iv=setInterval(tick,100);saveT();lastBoard='';renderBoard();drawT()}
 function refresh(){setMode();if(MODE==='host')syncHostLive();else if(MODE!=='host')hostLiveKey='';renderAuth();renderWho();if(MODE!==prev){prev=MODE;lastBoard='';renderBoard();if(MODE==='host')drawT()}rebuild();renderSetup();renderAdmin();viewSync()}
 const gcount=a=>{const m={};a.forEach(x=>m[x]=(m[x]||0)+1);return Object.entries(m).map(([k,n])=>n>1?k+' ×'+n:k).join(', ')};
 function openPick(side){const t=S.cur[side],opponent=S.cur[side==='a'?'b':'a'],ps=(SESS&&SESS.teams&&SESS.teams[t])||[];
@@ -148,7 +144,6 @@ async function saveLevels(){const levels=Object.entries(LEVEL_CHANGES).map(([id,
 
 /* ---- match ---- */
 function val(){if(MODE!=='host')return;if(nSess()>=SESS.max){toast('Limite de '+SESS.max+' matchs atteinte');return}
-  cancelAutoValidate();
   const c=S.cur,m={date:today(),ts:Date.now(),a:c.a,b:c.b,sa:c.sa,sb:c.sb,session_id:SESS.id,sid:SESS.id,goals:c.goals.map(g=>({team:g.s==='a'?c.a:c.b,p:g.p,og:g.og}))};
   S.pending.push(m);save();rebuild();
   const td=M.filter(x=>x.session_id===SESS.id),last=t=>{for(let i=td.length-1;i>=0;i--)if(td[i].a===t||td[i].b===t)return i;return -1},
