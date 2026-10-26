@@ -98,6 +98,18 @@ tr:first-child td{border-top:0}
 .ev{display:grid;grid-template-columns:70px 1fr;gap:2px 8px;padding:11px 0;border-top:1px solid var(--bd)}
 .ev:first-child{border-top:0}.ev b{text-transform:capitalize}.ev .w{font-weight:700}.ev small{grid-column:2;color:var(--mu)}
 .bar2{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.laundry-select{width:auto;min-width:0;flex:1;font:600 16px system-ui,sans-serif;text-align:left;text-align-last:left;-webkit-appearance:menulist;appearance:auto;background:var(--bg);color:var(--tx);border:1px solid var(--bd);border-radius:10px;padding:10px 12px}
+.laundry-current{display:grid;gap:6px;margin:14px 0;padding:12px;background:color-mix(in srgb,var(--ac) 8%,var(--bg));border-left:4px solid var(--ac);border-radius:8px}
+.laundry-current>span{font:800 24px var(--f)}
+.laundry-done{background:var(--ac);color:var(--act)}
+.laundry-skip{background:var(--bd);color:var(--tx)}
+.laundry-calendar{max-height:55vh;overflow:auto;border:1px solid var(--bd);border-radius:8px}
+.laundry-calendar table{min-width:390px}
+.laundry-calendar th,.laundry-calendar td{padding:8px 6px;text-align:left;font-size:14px}
+.laundry-calendar td:nth-child(2){font-size:16px}
+.laundry-calendar th{position:sticky;top:0;background:var(--card)}
+.laundry-calendar tr.laundry-today{background:color-mix(in srgb,var(--ac) 10%,var(--card))}
+.next-laundry{margin-top:14px;padding-top:10px;border-top:1px solid var(--bd)}
 nav{position:fixed;z-index:11;left:0;right:0;bottom:0;background:color-mix(in srgb,var(--card) 94%,transparent);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top:1px solid color-mix(in srgb,var(--bd) 80%,transparent);display:flex;justify-content:center;gap:6px;padding:8px 10px calc(8px + env(safe-area-inset-bottom,0px))}
 nav button{flex:1;max-width:180px;min-width:0;background:none;color:var(--mu);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:13px;white-space:nowrap}
 nav button[hidden]{display:none!important}

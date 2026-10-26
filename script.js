@@ -1,3 +1,5 @@
+import { projectLaundry } from './src/laundry.js';
+
 const TM={jaune:'Jaune',orange:'Orange',vert:'Vert',bleu:'Bleu'},ALL=['jaune','orange','vert','bleu'];
 const $=s=>document.querySelector(s);
 
@@ -9,7 +11,7 @@ let S=Object.assign({dur:390,cur:{a:'jaune',b:'orange',sa:0,sb:0},pending:[],set
 if(!S.setup||!S.setup.teams)S.setup={teams:['jaune','orange','vert'],assign:{}};
 if(S.setup.teams.length>3)S.setup.teams=S.setup.teams.slice(0,3);
 if(!S.cur.goals)S.cur.goals=[];
-let T,iv,wl,YR,R=[],M=[],SA=[],PL=[],USERS=[],LOADED=false,MODE='none',prev='',VER=0,busy=false,lastLive='',pushing=false,dirty=false,lastBoard='',lastBan='',lastSetup='',lastAdm='',NEWCODE=null,PICK=null,IMPORTED=null,hostLiveKey='';
+let T,iv,wl,YR,R=[],M=[],SA=[],PL=[],USERS=[],LAUNDRY=null,LOADED=false,MODE='none',prev='',VER=0,busy=false,lastLive='',pushing=false,dirty=false,lastBoard='',lastBan='',lastSetup='',lastAdm='',NEWCODE=null,PICK=null,IMPORTED=null,hostLiveKey='';
 let ME=S.me,SESS=(ME&&S.cache&&S.cache.host_user===ME.id)?S.cache:null,TEAMS=S.setup.teams,CAN_IMPORT_SUPABASE=false,LEVEL_CHANGES={},LEVEL_TAPS=new WeakMap();
 const isHost=()=>!!(SESS&&ME&&SESS.host_user===ME.id),isAdmin=()=>!!(ME&&ME.role==='admin');
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
@@ -102,7 +104,7 @@ function syncHostLive(){if(MODE!=='host'||!SESS||!SESS.live)return;const l=SESS.
   clearInterval(iv);const rem=l.run?Math.max(0,(l.end-Date.now())/1000):Math.max(0,Number(l.rem??l.dur??S.dur));
   T={run:!!l.run&&rem>0,rem,end:l.run?l.end:0,half:!!l.half,done:!!l.done||!!l.run&&rem<=0,started:!!l.started,hb:0};
   if(T.run)iv=setInterval(tick,100);saveT();lastBoard='';renderBoard();drawT()}
-function refresh(){setMode();if(MODE==='host')syncHostLive();else if(MODE!=='host')hostLiveKey='';renderAuth();renderWho();if(MODE!==prev){prev=MODE;lastBoard='';renderBoard();if(MODE==='host')drawT()}rebuild();renderSetup();renderAdmin();viewSync()}
+function refresh(){setMode();if(MODE==='host')syncHostLive();else if(MODE!=='host')hostLiveKey='';renderAuth();renderWho();if(MODE!==prev){prev=MODE;lastBoard='';renderBoard();if(MODE==='host')drawT()}rebuild();renderSetup();renderAdmin();renderBonus();viewSync()}
 const gcount=a=>{const m={};a.forEach(x=>m[x]=(m[x]||0)+1);return Object.entries(m).map(([k,n])=>n>1?k+' ×'+n:k).join(', ')};
 function openPick(side){const t=S.cur[side],opponent=S.cur[side==='a'?'b':'a'],ps=(SESS&&SESS.teams&&SESS.teams[t])||[];
   if(!ps.length){addGoal(side,'',0);return}
@@ -137,6 +139,8 @@ function doImport(){post('import-supabase').then(r=>{IMPORTED=r;CAN_IMPORT_SUPAB
 async function logout(){try{await post('logout')}catch(e){}ME=null;S.me=null;S.cache=null;S.timer=null;SESS=null;save();VER=0;LOADED=false;lastSetup='';lastAdm='';refresh()}
 function addUser(){const name=($('#nn').value||'').trim();if(!name)return;
   post('users',{name,level:+$('#nl').value,role:$('#na').checked?'admin':'player'}).then(r=>{NEWCODE={name:r.name,code:r.code};lastAdm='';pull(true)}).catch(e=>toast(e.status===409?'Ce nom existe déjà':'Création impossible'))}
+async function startLaundry(){const firstUserId=Number($('#laundryFirst')?.value);try{const result=await post('laundry/init',{firstUserId});toast('Rotation démarrée le '+laundryDate(result.startDate));await pull(true)}catch(e){toast(e.status===409?'La rotation est déjà démarrée':'Démarrage impossible')}}
+async function recordLaundry(action){try{const result=await post('laundry/action',{action});toast(action==='done'?'Lavage confirmé pour '+result.name:'Tour passé pour '+result.name);await pull(true)}catch(e){toast(e.status===409?'Ce tour a déjà été traité':'Action impossible, réessayez')}}
 async function saveLevels(){const levels=Object.entries(LEVEL_CHANGES).map(([id,level])=>({id:+id,level}));if(!levels.length)return;
   const button=$('#saveLevels');if(button)button.disabled=true;
   try{await patch('users/levels',{levels});LEVEL_CHANGES={};lastAdm='';toast('Niveaux sauvegardés');await pull(true)}
@@ -208,6 +212,16 @@ function renderPlayers(L){const A=pstats(L).sort(byWins),me=ME&&ME.name;
   $('#pls').innerHTML='<h2>Classement des joueurs</h2>'+(A.length?'<table class="cp"><tr><th></th><th>Joueur</th><th>J</th><th>V-N-D</th><th>% V</th><th>⚽</th><th>V</th></tr>'+A.map((x,i)=>`<tr class="${x.p===me?'me':''}"><td class="rk">${i+1}</td><td>${esc(x.p)}</td><td>${x.j}</td><td>${x.v}-${x.n}-${x.l}</td><td>${pct(x)}%</td><td>${x.g}</td><td class="pt">${x.v}</td></tr>`).join('')+'</table><p class="note">Classé par victoires, puis % de victoires.</p>':'<div class="empty">Pas encore de joueurs. Ils apparaissent dès la première session avec des équipes.</div>');
   const B=A.filter(x=>x.g>0).sort(byGoals),sc=$('#scs');
   if(sc)sc.innerHTML='<h2>Meilleurs buteurs</h2>'+(B.length?'<table class="cp"><tr><th></th><th>Joueur</th><th>J</th><th>Moy</th><th>⚽</th></tr>'+B.map((x,i)=>`<tr class="${x.p===me?'me':''}"><td class="rk">${i+1}</td><td>${esc(x.p)}</td><td>${x.j}</td><td>${x.j?(x.g/x.j).toFixed(2):'–'}</td><td class="pt">${x.g}</td></tr>`).join('')+'</table>':'<div class="empty">Les buts s\'affichent dès qu\'un buteur est choisi.</div>')}
+const laundryDate=date=>new Date(date+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+function renderBonus(){const el=$('#laundry');if(!el)return;if(!ME){el.innerHTML='';return}
+  if(!LAUNDRY?.rotation){el.innerHTML=`<h2>Rotation des chasubles</h2>${isAdmin()&&USERS.length?`<p>Choisissez le premier joueur. La rotation commence ce soir si nous sommes lundi, sinon au prochain lundi.</p><div class="set"><select class="laundry-select" id="laundryFirst" aria-label="Premier joueur">${USERS.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join('')}</select><button id="laundryStart">Démarrer la rotation</button></div>`:'<div class="empty">La rotation sera disponible dès qu’un admin l’aura démarrée.</div>'}`;return}
+  const {rotation,queue,events}=LAUNDRY,upcoming=projectLaundry(rotation.next_date,rotation.next_date,queue,[],52),past=events.filter(event=>event.date<rotation.next_date).slice(-52),schedule=past.concat(upcoming),current=schedule.find(turn=>turn.date===rotation.next_date),due=rotation.next_date<=today()&&!events.some(event=>event.date===rotation.next_date);
+  let h=`<h2>Rotation des chasubles</h2><p class="note">Un tour chaque lundi soir · rotation démarrée le ${esc(laundryDate(rotation.start_date))}.</p>`;
+  if(current?.name)h+=`<div class="laundry-current"><b>${due?'Ce lundi':'Prochain tour'} · ${esc(laundryDate(current.date))}</b><span>${esc(current.name)}</span>${due?'<div class="set"><button class="laundry-done" id="laundryDone">✓ Chasubles prises / lavées</button><button class="laundry-skip" id="laundrySkip">Passer au suivant</button></div>':''}</div>`;
+  h+='<h3>Calendrier annuel</h3><div class="laundry-calendar"><table><thead><tr><th>Date</th><th>Joueur</th><th>État</th></tr></thead><tbody>'+schedule.map(turn=>{
+    const status=turn.action==='done'?`✓ Confirmé${turn.actor_name?' par '+esc(turn.actor_name):''}`:turn.action==='skip'?`Tour passé${turn.actor_name?' par '+esc(turn.actor_name):''}`:turn.date===rotation.next_date?'À venir':'Prévu';
+    return `<tr${turn.date===rotation.next_date?' class="laundry-today"':''}><td>${esc(laundryDate(turn.date))}</td><td>${esc(turn.name||'—')}</td><td>${status}</td></tr>`}).join('')+'</tbody></table></div>';
+  el.innerHTML=h}
 function renderMe(){const el=$('#me');if(!el)return;if(!ME){el.innerHTML='';return}
   const y=YR||today().slice(0,4),A=pstats(M.filter(m=>dt(m).startsWith(y))),x=A.find(p=>p.p===ME.name);
   let h=`<h2>${esc(ME.name)} · saison ${y}</h2>`;
@@ -218,6 +232,7 @@ function renderMe(){const el=$('#me');if(!el)return;if(!ME){el.innerHTML='';retu
 <div class="rkl"><div><b>${ord(rw)}</b> sur ${N} aux victoires<small>${lead>x.v?(lead-x.v)+' victoire'+(lead-x.v>1?'s':'')+' du 1er':'vous êtes en tête'}</small></div>
 <div><b>${x.g?ord(rg):'–'}</b> aux buts<small>${x.g?(top>x.g?(top-x.g)+' but'+(top-x.g>1?'s':'')+' du 1er':'vous êtes en tête'):'aucun but encore'}</small></div></div>
 <p class="note">${x.j?(x.g/x.j).toFixed(2):'0.00'} but par match. Le classement complet est dans l'onglet Saison.</p>`}
+  if(LAUNDRY?.rotation){const {rotation,queue}=LAUNDRY,turn=projectLaundry(rotation.next_date,rotation.next_date,queue,[],Math.max(52,queue.length)).find(item=>item.user_id===ME.id);if(turn)h+=`<p class="note next-laundry">Prochaine date de lavage : <b>${esc(laundryDate(turn.date))}</b></p>`}
   el.innerHTML=h}
 function renderSeason(){const ys=[...new Set(M.map(m=>dt(m).slice(0,4)).concat(today().slice(0,4)))].sort().reverse();
   if(!YR||!ys.includes(YR))YR=ys[0];
@@ -259,7 +274,7 @@ async function pull(force){if(busy||document.hidden)return;busy=true;
     const st=await api('state?v='+(force?0:VER));
     const canImport=!!st.canImportSupabase;
     if(CAN_IMPORT_SUPABASE!==canImport){CAN_IMPORT_SUPABASE=canImport;lastAdm='';renderAdmin()}
-    if(!st.same){const wh=isHost();VER=st.v;LOADED=true;ME=st.me;S.me=ME;CAN_IMPORT_SUPABASE=!!st.canImportSupabase;const gm={};(st.goals||[]).forEach(g=>(gm[g.match_id]=gm[g.match_id]||[]).push({team:g.team,p:g.p,og:g.og}));R=st.matches.map(m=>({...m,goals:gm[m.id]||[]}));SA=st.sessions;USERS=st.users;PL=st.users.map(u=>u.name);
+    if(!st.same){const wh=isHost();VER=st.v;LOADED=true;ME=st.me;S.me=ME;CAN_IMPORT_SUPABASE=!!st.canImportSupabase;LAUNDRY=st.laundry||null;const gm={};(st.goals||[]).forEach(g=>(gm[g.match_id]=gm[g.match_id]||[]).push({team:g.team,p:g.p,og:g.og}));R=st.matches.map(m=>({...m,goals:gm[m.id]||[]}));SA=st.sessions;USERS=st.users;PL=st.users.map(u=>u.name);
       SESS=st.sessions.find(x=>x.status==='active')||null;S.cache=isHost()?SESS:null;
       if(wh&&!isHost())toast('Session terminée');
       save();refresh()}
@@ -309,6 +324,9 @@ document.addEventListener('click',e=>{if(e.target.id==='pick'){closePick();retur
   else if(b.id==='imp')two(b,doImport,'Confirmer ?');
   else if(b.id==='cpall'){try{navigator.clipboard.writeText(IMPORTED.codes.map(c=>c.name+' : '+c.code).join('\n'));toast('Copié')}catch(err){}}
   else if(b.id==='hideimp'){IMPORTED=null;lastAdm='';renderAdmin()}
+  else if(b.id==='laundryStart')startLaundry();
+  else if(b.id==='laundryDone')recordLaundry('done');
+  else if(b.id==='laundrySkip')recordLaundry('skip');
   else if(b.id==='logout')logout();
   else if(b.id==='myStats'){document.querySelector('[data-tab="me"]').click()}
   else if(b.id==='addu')addUser();
