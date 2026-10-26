@@ -9,7 +9,7 @@ let S=Object.assign({dur:390,cur:{a:'jaune',b:'orange',sa:0,sb:0},pending:[],set
 if(!S.setup||!S.setup.teams)S.setup={teams:['jaune','orange','vert'],assign:{}};
 if(S.setup.teams.length>3)S.setup.teams=S.setup.teams.slice(0,3);
 if(!S.cur.goals)S.cur.goals=[];
-let T,iv,wl,YR,R=[],M=[],SA=[],PL=[],USERS=[],LOADED=false,MODE='none',prev='',VER=0,busy=false,lastLive='',pushing=false,dirty=false,lastBoard='',lastBan='',lastSetup='',lastAdm='',NEWCODE=null,PICK=null,IMPORTED=null,autoValidateTimer=null,lastActivity=Date.now();
+let T,iv,wl,YR,R=[],M=[],SA=[],PL=[],USERS=[],LOADED=false,MODE='none',prev='',VER=0,busy=false,lastLive='',pushing=false,dirty=false,lastBoard='',lastBan='',lastSetup='',lastAdm='',NEWCODE=null,PICK=null,IMPORTED=null,autoValidateTimer=null,lastActivity=Date.now(),hostLiveKey='';
 let ME=S.me,SESS=(ME&&S.cache&&S.cache.host_user===ME.id)?S.cache:null,TEAMS=S.setup.teams,CAN_IMPORT_SUPABASE=false,LEVEL_CHANGES={},LEVEL_TAPS=new WeakMap();
 const isHost=()=>!!(SESS&&ME&&SESS.host_user===ME.id),isAdmin=()=>!!(ME&&ME.role==='admin');
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
@@ -71,7 +71,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden){lock();if
 async function pushLive(force){if(MODE!=='host'||!SESS)return;if(pushing){if(force)dirty=true;return}
   const l={a:S.cur.a,b:S.cur.b,sa:S.cur.sa,sb:S.cur.sb,g:S.cur.goals,dur:S.dur,run:T.run,end:T.run?T.end:0,rem:T.run?0:Math.round(T.rem*10)/10,half:T.half,done:T.done,started:T.started},j=JSON.stringify(l);
   if(j===lastLive&&!force)return;pushing=true;
-  try{await post('session/live',{id:SESS.id,live:l});lastLive=j}catch(e){}
+  try{await post('session/live',{id:SESS.id,live:l});lastLive=j}catch(e){if(!document.hidden)$('#sync').textContent='Match non synchronisé · vérifiez la connexion'}
   pushing=false;if(dirty){dirty=false;pushLive(true)}}
 function viewSync(){if(MODE!=='view'||!SESS)return;const L=SESS.live||{},d=L.dur||390,rem=L.run?Math.max(0,(L.end-Date.now())/1000):(L.rem==null?d:L.rem);
   drawT({run:L.run&&rem>0,rem,half:L.half,done:L.done||(L.run&&rem<=0),started:L.started,hb:0},d);
@@ -98,7 +98,12 @@ function setMode(){TEAMS=SESS&&SESS.teams?ALL.filter(t=>SESS.teams[t]):S.setup.t
   const pa=$('#p-admin');if(pa&&!isAdmin()){const leavingAdmin=!pa.hidden;pa.hidden=true;if(leavingAdmin){$('#p-session').hidden=false;document.querySelectorAll('nav button').forEach(n=>n.classList.toggle('on',n.dataset.tab==='session'))}}
   if(MODE!=='host')closePick();
   if(MODE==='host')fix()}
-function refresh(){setMode();renderAuth();renderWho();if(MODE!==prev){prev=MODE;lastBoard='';renderBoard();if(MODE==='host')drawT()}rebuild();renderSetup();renderAdmin();viewSync()}
+function syncHostLive(){if(MODE!=='host'||!SESS||!SESS.live)return;const l=SESS.live,key=SESS.id+':'+JSON.stringify(l);if(key===hostLiveKey)return;hostLiveKey=key;
+  S.cur={a:l.a||TEAMS[0],b:l.b||TEAMS[1],sa:+l.sa||0,sb:+l.sb||0,goals:Array.isArray(l.g)?l.g:[]};fix();
+  clearInterval(iv);const rem=l.run?Math.max(0,(l.end-Date.now())/1000):Math.max(0,Number(l.rem??l.dur??S.dur));
+  T={run:!!l.run&&rem>0,rem,end:l.run?l.end:0,half:!!l.half,done:!!l.done||!!l.run&&rem<=0,started:!!l.started,hb:0};
+  if(T.run)iv=setInterval(tick,100);else if(T.done)scheduleAutoValidate();else cancelAutoValidate();saveT();lastBoard=''}
+function refresh(){setMode();if(MODE==='host')syncHostLive();else if(MODE!=='host')hostLiveKey='';renderAuth();renderWho();if(MODE!==prev){prev=MODE;lastBoard='';renderBoard();if(MODE==='host')drawT()}rebuild();renderSetup();renderAdmin();viewSync()}
 const gcount=a=>{const m={};a.forEach(x=>m[x]=(m[x]||0)+1);return Object.entries(m).map(([k,n])=>n>1?k+' ×'+n:k).join(', ')};
 function openPick(side){const t=S.cur[side],opponent=S.cur[side==='a'?'b':'a'],ps=(SESS&&SESS.teams&&SESS.teams[t])||[];
   if(!ps.length){addGoal(side,'',0);return}
