@@ -1,4 +1,4 @@
-import { projectLaundry } from './src/laundry.js';
+import { projectLaundry } from './laundry.js';
 
 const TM={jaune:'Jaune',orange:'Orange',vert:'Vert',bleu:'Bleu'},ALL=['jaune','orange','vert','bleu'];
 const $=s=>document.querySelector(s);

@@ -1,6 +1,6 @@
 import { balance } from './balance.js';
 import { buildImport, fetchSupabase } from './import.js';
-import { dateInParis, mondayOnOrAfter, nextLaundryDate } from './laundry.js';
+import { dateInParis, mondayOnOrAfter, nextLaundryDate } from '../laundry.js';
 
 // Supabase (clés publiques) : surchargeables par les variables SUPABASE_URL / SUPABASE_KEY
 const SB_URL = 'https://fuaihkklnygbbiketvjb.supabase.co';

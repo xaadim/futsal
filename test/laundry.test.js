@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { dateInParis, mondayOnOrAfter, nextLaundryDate, projectLaundry, rotateQueue } from '../src/laundry.js';
+import { dateInParis, mondayOnOrAfter, nextLaundryDate, projectLaundry, rotateQueue } from '../laundry.js';
 
 test('calcule le jour métier dans le fuseau Europe/Paris', () => {
   assert.equal(dateInParis(new Date('2026-10-26T22:30:00Z')), '2026-10-26');
