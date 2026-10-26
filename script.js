@@ -1,5 +1,3 @@
-import { projectLaundry } from './laundry.js';
-
 const TM={jaune:'Jaune',orange:'Orange',vert:'Vert',bleu:'Bleu'},ALL=['jaune','orange','vert','bleu'];
 const $=s=>document.querySelector(s);
 
@@ -213,9 +211,10 @@ function renderPlayers(L){const A=pstats(L).sort(byWins),me=ME&&ME.name;
   const B=A.filter(x=>x.g>0).sort(byGoals),sc=$('#scs');
   if(sc)sc.innerHTML='<h2>Meilleurs buteurs</h2>'+(B.length?'<table class="cp"><tr><th></th><th>Joueur</th><th>J</th><th>Moy</th><th>⚽</th></tr>'+B.map((x,i)=>`<tr class="${x.p===me?'me':''}"><td class="rk">${i+1}</td><td>${esc(x.p)}</td><td>${x.j}</td><td>${x.j?(x.g/x.j).toFixed(2):'–'}</td><td class="pt">${x.g}</td></tr>`).join('')+'</table>':'<div class="empty">Les buts s\'affichent dès qu\'un buteur est choisi.</div>')}
 const laundryDate=date=>new Date(date+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+function projectLaundry(startDate,queue,count=52){const start=new Date(startDate+'T00:00:00Z');return Array.from({length:count},(_,index)=>{const date=new Date(start);date.setUTCDate(date.getUTCDate()+index*7);const player=queue.length?queue[index%queue.length]:null;return{date:date.toISOString().slice(0,10),user_id:player?.id??null,name:player?.name??null}})}
 function renderBonus(){const el=$('#laundry');if(!el)return;if(!ME){el.innerHTML='';return}
   if(!LAUNDRY?.rotation){el.innerHTML=`<h2>Rotation des chasubles</h2>${isAdmin()&&USERS.length?`<p>Choisissez le premier joueur. La rotation commence ce soir si nous sommes lundi, sinon au prochain lundi.</p><div class="set"><select class="laundry-select" id="laundryFirst" aria-label="Premier joueur">${USERS.map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join('')}</select><button id="laundryStart">Démarrer la rotation</button></div>`:'<div class="empty">La rotation sera disponible dès qu’un admin l’aura démarrée.</div>'}`;return}
-  const {rotation,queue,events}=LAUNDRY,upcoming=projectLaundry(rotation.next_date,rotation.next_date,queue,[],52),past=events.filter(event=>event.date<rotation.next_date).slice(-52),schedule=past.concat(upcoming),current=schedule.find(turn=>turn.date===rotation.next_date),due=rotation.next_date<=today()&&!events.some(event=>event.date===rotation.next_date);
+  const {rotation,queue,events}=LAUNDRY,upcoming=projectLaundry(rotation.next_date,queue,52),past=events.filter(event=>event.date<rotation.next_date).slice(-52),schedule=past.concat(upcoming),current=schedule.find(turn=>turn.date===rotation.next_date),due=rotation.next_date<=today()&&!events.some(event=>event.date===rotation.next_date);
   let h=`<h2>Rotation des chasubles</h2><p class="note">Un tour chaque lundi soir · rotation démarrée le ${esc(laundryDate(rotation.start_date))}.</p>`;
   if(current?.name)h+=`<div class="laundry-current"><b>${due?'Ce lundi':'Prochain tour'} · ${esc(laundryDate(current.date))}</b><span>${esc(current.name)}</span>${due?'<div class="set"><button class="laundry-done" id="laundryDone">✓ Chasubles prises / lavées</button><button class="laundry-skip" id="laundrySkip">Passer au suivant</button></div>':''}</div>`;
   h+='<h3>Calendrier annuel</h3><div class="laundry-calendar"><table><thead><tr><th>Date</th><th>Joueur</th><th>État</th></tr></thead><tbody>'+schedule.map(turn=>{
@@ -232,7 +231,7 @@ function renderMe(){const el=$('#me');if(!el)return;if(!ME){el.innerHTML='';retu
 <div class="rkl"><div><b>${ord(rw)}</b> sur ${N} aux victoires<small>${lead>x.v?(lead-x.v)+' victoire'+(lead-x.v>1?'s':'')+' du 1er':'vous êtes en tête'}</small></div>
 <div><b>${x.g?ord(rg):'–'}</b> aux buts<small>${x.g?(top>x.g?(top-x.g)+' but'+(top-x.g>1?'s':'')+' du 1er':'vous êtes en tête'):'aucun but encore'}</small></div></div>
 <p class="note">${x.j?(x.g/x.j).toFixed(2):'0.00'} but par match. Le classement complet est dans l'onglet Saison.</p>`}
-  if(LAUNDRY?.rotation){const {rotation,queue}=LAUNDRY,turn=projectLaundry(rotation.next_date,rotation.next_date,queue,[],Math.max(52,queue.length)).find(item=>item.user_id===ME.id);if(turn)h+=`<p class="note next-laundry">Prochaine date de lavage : <b>${esc(laundryDate(turn.date))}</b></p>`}
+  if(LAUNDRY?.rotation){const {rotation,queue}=LAUNDRY,turn=projectLaundry(rotation.next_date,queue,Math.max(52,queue.length)).find(item=>item.user_id===ME.id);if(turn)h+=`<p class="note next-laundry">Prochaine date de lavage : <b>${esc(laundryDate(turn.date))}</b></p>`}
   el.innerHTML=h}
 function renderSeason(){const ys=[...new Set(M.map(m=>dt(m).slice(0,4)).concat(today().slice(0,4)))].sort().reverse();
   if(!YR||!ys.includes(YR))YR=ys[0];
