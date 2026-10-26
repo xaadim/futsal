@@ -66,12 +66,13 @@ input[type=number]{width:62px;padding:8px;border-radius:10px;border:1px solid va
 .side{background:var(--tc);color:var(--tt);border-radius:22px;padding:12px;text-align:center;display:flex;flex-direction:column;gap:8px}
 select{appearance:none;-webkit-appearance:none;background:rgba(255,255,255,.4);border:0;border-radius:12px;padding:8px;font:800 24px var(--f);text-align:center;text-align-last:center;color:var(--tt);width:100%}
 .n{font:800 clamp(90px,32vw,150px)/.9 var(--f);font-variant-numeric:tabular-nums}
-.team-players{font-size:12px;line-height:1.15;overflow-wrap:anywhere;opacity:.8;height:4.6em;flex:none;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4;overflow:hidden}
+.team-players{font-size:12px;line-height:1.15;overflow-wrap:anywhere;opacity:.8;height:4.6em;flex:none;display:-webkit-box;-webkit-box-orient:vertical;line-clamp:4;-webkit-line-clamp:4;overflow:hidden}
 .plus{background:var(--tt);color:var(--tc);font:800 34px var(--f);padding:12px;border-radius:16px}
 .minus{background:rgba(255,255,255,.4);color:var(--tt)}
 .val{width:100%;background:var(--tx);color:var(--bg);font-size:20px;padding:16px;border-radius:16px}
 .val.pulse{background:var(--ac);color:var(--act)}
 .val.ctl{margin:0 0 10px;padding:11px 14px}
+.end-session{width:100%;margin:0 0 12px;background:color-mix(in srgb,var(--danger) 12%,var(--card));color:var(--danger);border:1px solid color-mix(in srgb,var(--danger) 38%,transparent)}
 .arm{background:var(--danger)!important;color:#fff!important}
 /* tables */
 table{width:100%;border-collapse:collapse}
@@ -97,7 +98,7 @@ tr:first-child td{border-top:0}
 .ev{display:grid;grid-template-columns:70px 1fr;gap:2px 8px;padding:11px 0;border-top:1px solid var(--bd)}
 .ev:first-child{border-top:0}.ev b{text-transform:capitalize}.ev .w{font-weight:700}.ev small{grid-column:2;color:var(--mu)}
 .bar2{display:flex;justify-content:space-between;align-items:center;gap:10px}
-nav{position:fixed;z-index:11;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--bd);display:flex;justify-content:center;gap:6px;padding:8px 10px calc(8px + env(safe-area-inset-bottom,0px))}
+nav{position:fixed;z-index:11;left:0;right:0;bottom:0;background:color-mix(in srgb,var(--card) 94%,transparent);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top:1px solid color-mix(in srgb,var(--bd) 80%,transparent);display:flex;justify-content:center;gap:6px;padding:8px 10px calc(8px + env(safe-area-inset-bottom,0px))}
 nav button{flex:1;max-width:180px;min-width:0;background:none;color:var(--mu);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:13px;white-space:nowrap}
 nav button[hidden]{display:none!important}
 nav button span{font-size:22px;line-height:1}
@@ -155,28 +156,46 @@ body:not(.anon) #auth{display:none}
 .pc.pr{border-color:var(--ac)}
 @media(max-width:420px){header{flex-wrap:nowrap;gap:4px}.brand{gap:5px}h1{font-size:clamp(20px,6vw,25px)}#who{max-width:45%;font-size:11px}}
 @media(max-width:560px){
-	main{padding:8px 12px 118px}
+	main{width:100%;padding:8px 12px calc(154px + env(safe-area-inset-bottom,0px))}
+	header{margin:4px 2px 10px}
 	.session-switch{margin-bottom:8px;grid-template-columns:repeat(3,minmax(0,1fr))}
-	.session-switch button{min-width:0;min-height:48px;padding:5px 2px;gap:2px;flex-direction:column;white-space:normal;line-height:1.1;text-align:center;overflow-wrap:anywhere}
-	.session-switch button span{flex:none;line-height:1}
+	.session-switch button{min-width:0;min-height:52px;padding:5px 2px;gap:3px;flex-direction:column;white-space:normal;line-height:1.1;text-align:center;overflow-wrap:anywhere;font-size:13px}
+	.session-switch button span{flex:none;line-height:1;font-size:18px}
 	#tc.card{padding:10px 12px;margin-bottom:8px;border-radius:16px}
 	#time{font-size:clamp(82px,27vw,116px);line-height:.95;margin:2px 0 8px}
 	.bar{height:7px;margin-bottom:8px}
-	.go{font-size:21px;padding:13px;border-radius:13px}
-	#rst{width:52px;font-size:20px}
+	.go{min-height:52px;font-size:20px;padding:12px;border-radius:14px}
+	#rst{width:52px;min-height:52px;font-size:20px}
 	details{margin-top:8px}
 	#board{gap:7px;margin-bottom:8px}
-	.side{padding:8px;border-radius:15px;gap:5px}
+	.side{min-width:0;padding:9px;border-radius:17px;gap:6px}
 	#board select{font-size:20px;line-height:1;padding:5px;border-radius:8px}
 	.team-players{font-size:11px;line-height:1.1;height:4.4em}
 	#board .n{font-size:clamp(64px,19vw,84px);line-height:.85}
 	#board .gl{font-size:10px;line-height:1;min-height:10px}
-	#board .plus{font-size:24px;line-height:1;padding:7px;border-radius:10px}
-	#board .minus{font-size:14px;line-height:1;padding:6px;border-radius:9px}
+	#board .plus{min-height:48px;font-size:24px;line-height:1;padding:7px;border-radius:12px}
+	#board .minus{min-height:40px;font-size:14px;line-height:1;padding:6px;border-radius:10px}
 	.val.ctl{padding:9px 12px;margin-bottom:8px}
+	#session-dock{bottom:calc(76px + env(safe-area-inset-bottom,0px));width:calc(100% - 24px);border-radius:16px}
+	#session-dock button{min-height:48px;font-size:13px}
+	#toast{bottom:calc(140px + env(safe-area-inset-bottom,0px));max-width:calc(100vw - 28px)}
+	.card{padding:14px;border-radius:17px}
+	table{font-size:13px}
+	td{padding:11px 4px}
+	td:nth-child(2){font-size:16px}
+	td.pt{font-size:26px}
+	.cp td,.cp th{font-size:12px}
+	.cp td:nth-child(2){font-size:14px}
+	.cp td.pt{font-size:22px}
+	.h{grid-template-columns:32px minmax(0,1fr) auto minmax(0,1fr);gap:4px;padding:10px 0}
+	.h button{grid-column:2/-1;justify-self:end;min-height:40px}
+	.sc{font-size:24px;padding:0 3px}
+	.kpis{gap:5px}
+	.kp{padding:9px 5px}
+	.kp b{font-size:29px}
 }
 @media(max-width:560px) and (max-height:760px){
-	main{padding-top:4px;padding-bottom:76px}
+	main{padding-top:4px;padding-bottom:calc(154px + env(safe-area-inset-bottom,0px))}
 	header{margin-bottom:6px}
 	.brand .logo{width:30px;height:30px;font-size:25px}
 	h1{font-size:25px}
@@ -197,7 +216,7 @@ body:not(.anon) #auth{display:none}
 	#board .minus{font-size:12px;padding:4px;border-radius:7px}
 	.val.ctl{font-size:16px;padding:7px 10px;margin-bottom:6px}
 }
-@media(max-width:360px){header{gap:2px}.brand{gap:3px}.brand .logo{width:26px;font-size:22px}h1{font-size:20px}#who{font-size:10px;max-width:43%}.session-switch{gap:2px;padding:3px}.session-switch button{min-height:46px;gap:2px;padding:4px 1px;font-size:12px}.session-switch button span{font-size:16px}}
+@media(max-width:360px){header{gap:2px}.brand{gap:3px}.brand .logo{width:26px;font-size:22px}h1{font-size:20px}#who{font-size:10px;max-width:43%}.session-switch{gap:2px;padding:3px}.session-switch button{min-height:48px;gap:2px;padding:4px 1px;font-size:11px}.session-switch button span{font-size:16px}nav button{font-size:10px}#board{gap:6px}.side{padding:7px}#board .n{font-size:clamp(58px,18vw,72px)}}
 
 /* buteurs et stats */
 .gl{font-size:14px;font-weight:600;min-height:20px;opacity:.85;overflow-wrap:anywhere}
@@ -216,4 +235,12 @@ body:not(.anon) #auth{display:none}
 .rkl b{font:800 30px var(--f);margin-right:4px}.rkl small{display:block;color:var(--mu)}
 tr.me td{background:color-mix(in srgb,var(--ac) 16%,transparent)}
 nav button{padding:8px 2px;font-size:12px}
+
+@media(max-width:560px){
+	nav{display:flex;gap:2px;padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px))}
+	nav button{flex:1;max-width:none;min-width:0;min-height:56px;padding:5px 1px;font-size:11px;line-height:1.1;white-space:normal;overflow-wrap:anywhere;border-radius:12px}
+	nav button span{font-size:20px;line-height:1}
+	nav button.on{background:color-mix(in srgb,var(--ac) 13%,var(--card));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ac) 45%,transparent)}
+	.session-switch button.on{background:color-mix(in srgb,var(--ac) 12%,var(--card));color:var(--tx);border-color:var(--ac);box-shadow:0 0 0 1px color-mix(in srgb,var(--ac) 22%,transparent)}
+}
 nav button span{font-size:20px}

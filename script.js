@@ -9,7 +9,7 @@ let S=Object.assign({dur:390,cur:{a:'jaune',b:'orange',sa:0,sb:0},pending:[],set
 if(!S.setup||!S.setup.teams)S.setup={teams:['jaune','orange','vert'],assign:{}};
 if(S.setup.teams.length>3)S.setup.teams=S.setup.teams.slice(0,3);
 if(!S.cur.goals)S.cur.goals=[];
-let T,iv,wl,YR,R=[],M=[],SA=[],PL=[],USERS=[],LOADED=false,MODE='none',prev='',VER=0,busy=false,lastLive='',pushing=false,dirty=false,lastBoard='',lastBan='',lastSetup='',lastAdm='',NEWCODE=null,PICK=null,IMPORTED=null,autoValidateTimer=null,lastActivity=Date.now();
+let T,iv,wl,YR,R=[],M=[],SA=[],PL=[],USERS=[],LOADED=false,MODE='none',prev='',VER=0,busy=false,lastLive='',pushing=false,dirty=false,lastBoard='',lastBan='',lastSetup='',lastAdm='',NEWCODE=null,PICK=null,IMPORTED=null,hostLiveKey='';
 let ME=S.me,SESS=(ME&&S.cache&&S.cache.host_user===ME.id)?S.cache:null,TEAMS=S.setup.teams,CAN_IMPORT_SUPABASE=false,LEVEL_CHANGES={},LEVEL_TAPS=new WeakMap();
 const isHost=()=>!!(SESS&&ME&&SESS.host_user===ME.id),isAdmin=()=>!!(ME&&ME.role==='admin');
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
@@ -30,26 +30,22 @@ function endBuzz(){for(let i=0;i<3;i++){const t=i*1.3;tone(220,t,1.05,'sawtooth'
 
 /* ---- chrono (géré par l'organisateur de la session) ---- */
 function saveT(){S.timer=(SESS&&isHost())?{sid:SESS.id,run:T.run,end:T.end,rem:T.rem,half:T.half,done:T.done,started:T.started}:null;save()}
-function cancelAutoValidate(){clearTimeout(autoValidateTimer);autoValidateTimer=null}
-function scheduleAutoValidate(){cancelAutoValidate();if(MODE!=='host'||!T.done)return;autoValidateTimer=setTimeout(()=>{if(MODE==='host'&&T.done&&Date.now()-lastActivity>=10000)val();else scheduleAutoValidate()},Math.max(0,10000-(Date.now()-lastActivity)))}
-function markActivity(){lastActivity=Date.now();if(T&&T.done)scheduleAutoValidate()}
-function rst(){cancelAutoValidate();clearInterval(iv);T={run:false,rem:S.dur,end:0,half:false,done:false,started:false,hb:0};saveT();drawT();renderRank();pushLive(true)}
+function rst(){clearInterval(iv);T={run:false,rem:S.dur,end:0,half:false,done:false,started:false,hb:0};saveT();drawT();renderRank();pushLive(true)}
 function restoreT(){const t=S.timer;
   if(MODE==='host'&&t&&SESS&&t.sid===SESS.id){clearInterval(iv);T={run:false,rem:t.rem,end:0,half:!!t.half,done:!!t.done,started:!!t.started,hb:0};
     if(t.run){const rem=(t.end-Date.now())/1000;
-      if(rem>0){T.run=true;T.end=t.end;T.rem=rem;iv=setInterval(tick,100)}else{T.rem=0;T.done=true;T.half=true;lastActivity=Date.now()}}
-    saveT();drawT();pushLive(true);if(T.done)scheduleAutoValidate()}
+      if(rem>0){T.run=true;T.end=t.end;T.rem=rem;iv=setInterval(tick,100)}else{T.rem=0;T.done=true;T.half=true}}
+    saveT();drawT();pushLive(true)}
   else rst()}
 async function lock(){try{if(wl)return;wl=await navigator.wakeLock.request('screen');wl.addEventListener('release',()=>{wl=null})}catch(e){wl=null}}
-document.addEventListener('pointerdown',()=>{lock();markActivity()});
-document.addEventListener('keydown',markActivity);
+document.addEventListener('pointerdown',lock);
 function go(){au();if(T.done)return;
   if(T.run){T.rem=Math.max(0,(T.end-Date.now())/1000);T.run=false;clearInterval(iv)}
   else{T.run=true;T.started=true;T.end=Date.now()+T.rem*1000;lock();iv=setInterval(tick,100)}
   saveT();drawT();renderRank();pushLive(true)}
 function tick(){if(!T.run)return;T.rem=Math.max(0,(T.end-Date.now())/1000);
   if(!T.half&&T.rem<=S.dur/2){T.half=true;T.hb=Date.now()+4000;halfBeep();saveT();pushLive(true)}
-  if(T.rem<=0){T.run=false;T.done=true;clearInterval(iv);endBuzz();saveT();pushLive(true);lastActivity=Date.now();scheduleAutoValidate()}
+  if(T.rem<=0){T.run=false;T.done=true;clearInterval(iv);endBuzz();saveT();pushLive(true)}
   drawT()}
 function liveState(){const l=MODE==='host'?{...S.cur,run:T.run,started:T.started,done:T.done}:((SESS&&SESS.live)||{});return l||{}}
 function updateLiveTabs(){const l=liveState(),active=!!(SESS&&l.started);
@@ -63,14 +59,15 @@ function drawT(t=T,d=S.dur){const c=$('#tc'),hb=t.run&&Date.now()<(t.hb||0);
   const g=$('#go'),v=$('#val'),n=nSess(),mx=SESS.max,full=n>=mx;
   g.textContent=t.done?'Terminé':t.run?'⏸ Pause':t.started?'▶ Reprendre':'▶ Démarrer';g.disabled=t.done||full;
   v.classList.toggle('pulse',t.done);v.disabled=full;
-  if(!v.dataset.arm)v.textContent=full?'Session terminée ('+mx+' matchs)':'✓ Valider le match ('+(n+1)+'/'+mx+')'}
+  if(!v.dataset.arm)v.textContent=full?'Session terminée ('+mx+' matchs)':'✓ Valider le match ('+(n+1)+'/'+mx+')';
+  const end=$('#endS');if(end)end.hidden=MODE!=='host'||!SESS}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){lock();if(T.run)tick();pull()}});
 
 /* ---- live : l'organisateur publie, les autres regardent ---- */
 async function pushLive(force){if(MODE!=='host'||!SESS)return;if(pushing){if(force)dirty=true;return}
   const l={a:S.cur.a,b:S.cur.b,sa:S.cur.sa,sb:S.cur.sb,g:S.cur.goals,dur:S.dur,run:T.run,end:T.run?T.end:0,rem:T.run?0:Math.round(T.rem*10)/10,half:T.half,done:T.done,started:T.started},j=JSON.stringify(l);
   if(j===lastLive&&!force)return;pushing=true;
-  try{await post('session/live',{id:SESS.id,live:l});lastLive=j}catch(e){}
+  try{await post('session/live',{id:SESS.id,live:l});lastLive=j}catch(e){if(!document.hidden)$('#sync').textContent='Match non synchronisé · vérifiez la connexion'}
   pushing=false;if(dirty){dirty=false;pushLive(true)}}
 function viewSync(){if(MODE!=='view'||!SESS)return;const L=SESS.live||{},d=L.dur||390,rem=L.run?Math.max(0,(L.end-Date.now())/1000):(L.rem==null?d:L.rem);
   drawT({run:L.run&&rem>0,rem,half:L.half,done:L.done||(L.run&&rem<=0),started:L.started,hb:0},d);
@@ -97,7 +94,15 @@ function setMode(){TEAMS=SESS&&SESS.teams?ALL.filter(t=>SESS.teams[t]):S.setup.t
   const pa=$('#p-admin');if(pa&&!isAdmin()){const leavingAdmin=!pa.hidden;pa.hidden=true;if(leavingAdmin){$('#p-session').hidden=false;document.querySelectorAll('nav button').forEach(n=>n.classList.toggle('on',n.dataset.tab==='session'))}}
   if(MODE!=='host')closePick();
   if(MODE==='host')fix()}
-function refresh(){setMode();renderAuth();renderWho();if(MODE!==prev){prev=MODE;lastBoard='';renderBoard();if(MODE==='host')drawT()}rebuild();renderSetup();renderAdmin();viewSync()}
+function syncHostLive(){if(MODE!=='host'||!SESS||!SESS.live)return;const l=SESS.live,key=SESS.id+':'+JSON.stringify(l);if(key===hostLiveKey)return;hostLiveKey=key;
+  const local={a:S.cur.a,b:S.cur.b,sa:S.cur.sa,sb:S.cur.sb,g:S.cur.goals,dur:S.dur,run:T.run,end:T.run?T.end:0,rem:T.run?0:Math.round(T.rem*10)/10,half:T.half,done:T.done,started:T.started};
+  if(JSON.stringify(local)===JSON.stringify(l))return;
+  if(Number.isFinite(+l.dur)&&+l.dur>=10)S.dur=+l.dur;
+  S.cur={a:l.a||TEAMS[0],b:l.b||TEAMS[1],sa:+l.sa||0,sb:+l.sb||0,goals:Array.isArray(l.g)?l.g:[]};fix();
+  clearInterval(iv);const rem=l.run?Math.max(0,(l.end-Date.now())/1000):Math.max(0,Number(l.rem??l.dur??S.dur));
+  T={run:!!l.run&&rem>0,rem,end:l.run?l.end:0,half:!!l.half,done:!!l.done||!!l.run&&rem<=0,started:!!l.started,hb:0};
+  if(T.run)iv=setInterval(tick,100);saveT();lastBoard='';renderBoard();drawT()}
+function refresh(){setMode();if(MODE==='host')syncHostLive();else if(MODE!=='host')hostLiveKey='';renderAuth();renderWho();if(MODE!==prev){prev=MODE;lastBoard='';renderBoard();if(MODE==='host')drawT()}rebuild();renderSetup();renderAdmin();viewSync()}
 const gcount=a=>{const m={};a.forEach(x=>m[x]=(m[x]||0)+1);return Object.entries(m).map(([k,n])=>n>1?k+' ×'+n:k).join(', ')};
 function openPick(side){const t=S.cur[side],opponent=S.cur[side==='a'?'b':'a'],ps=(SESS&&SESS.teams&&SESS.teams[t])||[];
   if(!ps.length){addGoal(side,'',0);return}
@@ -118,7 +123,7 @@ async function startSession(){const tm=S.setup.teams,as=S.setup.assign;
     SESS={id:r.id,date:today(),host_user:ME.id,host_name:ME.name,teams:roster,live,status:'active',max:12};S.cache=SESS;save();
     refresh();rst();toast('Session démarrée')}
   catch(e){toast(e.status===409?'Une session est déjà en cours':'Impossible de démarrer : vérifiez la connexion');pull(true)}}
-function endSess(){post('session/end',{id:SESS.id}).then(()=>{toast('Session terminée');pull(true)}).catch(()=>toast('Action refusée'))}
+function endSess(){if(MODE!=='host'||!SESS)return;post('session/end',{id:SESS.id}).then(()=>{S.timer=null;save();toast('Session terminée · vous pouvez en démarrer une nouvelle');pull(true)}).catch(()=>toast('Action refusée'))}
 async function gen(){const as=S.setup.assign,names=PL.filter(p=>as[p]),tm=S.setup.teams;
   if(names.length<tm.length){toast('Pas assez de joueurs présents');return}
   try{const r=await post('teams/generate',{names,k:tm.length});
@@ -139,7 +144,6 @@ async function saveLevels(){const levels=Object.entries(LEVEL_CHANGES).map(([id,
 
 /* ---- match ---- */
 function val(){if(MODE!=='host')return;if(nSess()>=SESS.max){toast('Limite de '+SESS.max+' matchs atteinte');return}
-  cancelAutoValidate();
   const c=S.cur,m={date:today(),ts:Date.now(),a:c.a,b:c.b,sa:c.sa,sb:c.sb,session_id:SESS.id,sid:SESS.id,goals:c.goals.map(g=>({team:g.s==='a'?c.a:c.b,p:g.p,og:g.og}))};
   S.pending.push(m);save();rebuild();
   const td=M.filter(x=>x.session_id===SESS.id),last=t=>{for(let i=td.length-1;i>=0;i--)if(td[i].a===t||td[i].b===t)return i;return -1},
@@ -228,6 +232,7 @@ function renderSeason(){const ys=[...new Set(M.map(m=>dt(m).slice(0,4)).concat(t
   $('#evs').innerHTML=evs.length?evs.map(e=>`<div class="ev"><b>${new Date(e.d+'T12:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}</b><span class="w t-${e.r[0].t}"><i class="dot"></i>${TM[e.r[0].t]}</span><small>${e.r.map(x=>TM[x.t]+' '+x.p).join(', ')}</small></div>`).join(''):''}
 function renderSessionRank(L){const sessions=SA.filter(s=>String(s.date||'').startsWith(YR)).sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id),select=$('#sessionSelect'),out=$('#sessionRank');if(!select||!out)return;
   const previous=select.value;select.innerHTML=sessions.map(s=>`<option value="${s.id}">${new Date(s.date+'T12:00').toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})} · ${s.status==='active'?'En cours':'Terminée'}</option>`).join('');
+  let remove=$('#deleteSession');if(isAdmin()&&sessions.length){if(!remove){remove=document.createElement('button');remove.id='deleteSession';remove.className='sm';remove.textContent='🗑 Supprimer cette session';select.insertAdjacentElement('afterend',remove)}}else remove?.remove();
   if(!sessions.length){out.innerHTML='<div class="empty">Aucune session cette saison.</div>';return}
   const selected=sessions.find(s=>String(s.id)===previous)||sessions[0];select.value=selected.id;
   const matches=L.filter(m=>m.session_id===selected.id),rows=calc(matches,ALL).filter(x=>x.j);
@@ -284,6 +289,7 @@ document.addEventListener('click',e=>{if(e.target.id==='pick'){closePick();retur
   else if(b.id==='toggle-pres'){const as=S.setup.assign,allPresent=PL.length>0&&PL.every(p=>!!as[p]);
     PL.forEach(p=>{if(allPresent)delete as[p];else if(!as[p])as[p]='P'});save();lastSetup='';renderSetup()}
   else if(d.del!==undefined)two(b,()=>{const m=M[+d.del];if(m&&m.id)api('matches/'+m.id,{method:'DELETE'}).then(()=>pull(true)).catch(()=>toast('Suppression impossible'))},'Sûr ?');
+  else if(b.id==='deleteSession')two(b,async()=>{const id=$('#sessionSelect').value;if(!id)return;try{await api('sessions/'+id,{method:'DELETE'});toast('Session, matchs et buts supprimés');await pull(true)}catch(e){toast(e.status===409?'Terminez la session avant de la supprimer':e.status===404?'Cette session n’existe plus':'Suppression impossible')}},'Supprimer tout ?');
   else if(b.id==='retryMatches'){S.pending.forEach(m=>delete m.syncError);save();pull(true)}
   else if(d.nc)two(b,()=>post('users/'+d.nc+'/code').then(r=>{NEWCODE={name:(USERS.find(u=>String(u.id)===d.nc)||{}).name,code:r.code};lastAdm='';pull(true)}).catch(()=>toast('Action refusée')),'Sûr ?');
   else if(d.adm){const u=USERS.find(x=>String(x.id)===d.adm);patch('users/'+d.adm,{role:u&&u.role==='admin'?'player':'admin'}).then(()=>pull(true)).catch(()=>toast('Action refusée'))}
