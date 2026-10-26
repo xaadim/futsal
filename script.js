@@ -228,6 +228,7 @@ function renderSeason(){const ys=[...new Set(M.map(m=>dt(m).slice(0,4)).concat(t
   $('#evs').innerHTML=evs.length?evs.map(e=>`<div class="ev"><b>${new Date(e.d+'T12:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}</b><span class="w t-${e.r[0].t}"><i class="dot"></i>${TM[e.r[0].t]}</span><small>${e.r.map(x=>TM[x.t]+' '+x.p).join(', ')}</small></div>`).join(''):''}
 function renderSessionRank(L){const sessions=SA.filter(s=>String(s.date||'').startsWith(YR)).sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id),select=$('#sessionSelect'),out=$('#sessionRank');if(!select||!out)return;
   const previous=select.value;select.innerHTML=sessions.map(s=>`<option value="${s.id}">${new Date(s.date+'T12:00').toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})} · ${s.status==='active'?'En cours':'Terminée'}</option>`).join('');
+  let remove=$('#deleteSession');if(isAdmin()&&sessions.length){if(!remove){remove=document.createElement('button');remove.id='deleteSession';remove.className='sm';remove.textContent='🗑 Supprimer cette session';select.insertAdjacentElement('afterend',remove)}}else remove?.remove();
   if(!sessions.length){out.innerHTML='<div class="empty">Aucune session cette saison.</div>';return}
   const selected=sessions.find(s=>String(s.id)===previous)||sessions[0];select.value=selected.id;
   const matches=L.filter(m=>m.session_id===selected.id),rows=calc(matches,ALL).filter(x=>x.j);
@@ -284,6 +285,7 @@ document.addEventListener('click',e=>{if(e.target.id==='pick'){closePick();retur
   else if(b.id==='toggle-pres'){const as=S.setup.assign,allPresent=PL.length>0&&PL.every(p=>!!as[p]);
     PL.forEach(p=>{if(allPresent)delete as[p];else if(!as[p])as[p]='P'});save();lastSetup='';renderSetup()}
   else if(d.del!==undefined)two(b,()=>{const m=M[+d.del];if(m&&m.id)api('matches/'+m.id,{method:'DELETE'}).then(()=>pull(true)).catch(()=>toast('Suppression impossible'))},'Sûr ?');
+  else if(b.id==='deleteSession')two(b,async()=>{const id=$('#sessionSelect').value;if(!id)return;try{await api('sessions/'+id,{method:'DELETE'});toast('Session, matchs et buts supprimés');await pull(true)}catch(e){toast(e.status===409?'Terminez la session avant de la supprimer':e.status===404?'Cette session n’existe plus':'Suppression impossible')}},'Supprimer tout ?');
   else if(b.id==='retryMatches'){S.pending.forEach(m=>delete m.syncError);save();pull(true)}
   else if(d.nc)two(b,()=>post('users/'+d.nc+'/code').then(r=>{NEWCODE={name:(USERS.find(u=>String(u.id)===d.nc)||{}).name,code:r.code};lastAdm='';pull(true)}).catch(()=>toast('Action refusée')),'Sûr ?');
   else if(d.adm){const u=USERS.find(x=>String(x.id)===d.adm);patch('users/'+d.adm,{role:u&&u.role==='admin'?'player':'admin'}).then(()=>pull(true)).catch(()=>toast('Action refusée'))}

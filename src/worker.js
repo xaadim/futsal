@@ -231,6 +231,21 @@ async function route(req, env, u, p) {
       await DB.batch([q('DELETE FROM goals WHERE match_id = ?', +p[2]), q('DELETE FROM matches WHERE id = ?', +p[2]), bump()]);
       return J({ ok: 1 });
     }
+    if (r === 'sessions' && m === 'DELETE') {
+      if (!admin) return bad(403, 'admin');
+      const id = Number(p[2]);
+      if (!Number.isSafeInteger(id) || id < 1) return bad(400, 'session');
+      const session = await q('SELECT status FROM sessions WHERE id = ?', id).first();
+      if (!session) return bad(404, 'session');
+      if (session.status === 'active') return bad(409, 'session-active');
+      await DB.batch([
+        q('DELETE FROM goals WHERE match_id IN (SELECT id FROM matches WHERE session_id = ?)', id),
+        q('DELETE FROM matches WHERE session_id = ?', id),
+        q('DELETE FROM sessions WHERE id = ?', id),
+        bump(),
+      ]);
+      return J({ ok: 1 });
+    }
 
     if (r === 'users') {
       if (!admin) return bad(403, 'admin');
