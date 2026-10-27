@@ -304,6 +304,29 @@ async function route(req, env, u, p) {
     }
 
     if (r === 'users') {
+      if (m === 'PATCH' && p[3] === 'name') {
+        const id = Number(p[2]);
+        if (!Number.isSafeInteger(id) || id < 1) return bad(400, 'joueur');
+        if (!admin && id !== me.id) return bad(403, 'droits');
+        const b = await body();
+        const name = String(b.name || '').trim();
+        if (!name || name.length > 30) return bad(400, 'nom');
+        const user = await q('SELECT id, name FROM users WHERE id = ?', id).first();
+        if (!user) return bad(404, 'joueur');
+        if (await q('SELECT 1 x FROM users WHERE name = ? COLLATE NOCASE AND id <> ?', name, id).first()) return bad(409, 'nom-existant');
+        try {
+          await DB.batch([
+            q('UPDATE users SET name = ? WHERE id = ?', name, id),
+            q('UPDATE sessions SET teams = replace(teams, ?, ?) WHERE instr(teams, ?) > 0', JSON.stringify(user.name), JSON.stringify(name), JSON.stringify(user.name)),
+            q('UPDATE goals SET player = ? WHERE player = ? AND own_goal = 0', name, user.name),
+            bump(),
+          ]);
+          return J({ ok: 1, id, name });
+        } catch (e) {
+          if (await q('SELECT 1 x FROM users WHERE name = ? COLLATE NOCASE AND id <> ?', name, id).first()) return bad(409, 'nom-existant');
+          throw e;
+        }
+      }
       if (!admin) return bad(403, 'admin');
       if (m === 'POST' && !p[2]) {
         const b = await body();
