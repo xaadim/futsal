@@ -170,12 +170,16 @@ function renderWho(){const w=$('#who');if(w)w.innerHTML=ME?`<details class="acco
 function renderSetup(){const el=$('#setup');if(MODE!=='none')return;let h='';
   if(ME&&!LOADED)h='<div class="card empty">Connexion…</div>';
   else if(ME){const tm=S.setup.teams,as=S.setup.assign,pres=PL.filter(p=>as[p]).length;
+    const ordered=PL.map((p,i)=>({p,i})).sort((a,b)=>{
+      const rank=p=>as[p]==='P'?tm.length:as[p]?tm.indexOf(as[p]):tm.length+1;
+      return rank(a.p)-rank(b.p)||a.p.localeCompare(b.p,'fr',{sensitivity:'base'});
+    });
     h=`<div class="card"><h2>Nouvelle session</h2><p class="note" style="margin:0 0 10px">Aucune session en cours. Votre compte (${esc(ME.name)}) gérera le chrono et la validation des scores jusqu'à la fin des 12 matchs. Les autres suivent en direct.</p>
 <div class="set"><label>Équipes ce soir (2 ou 3)</label><span>${ALL.map(t=>`<button class="chip t-${t}${tm.includes(t)?' on':''}" data-tg="${t}">${TM[t]}</button>`).join(' ')}</span></div></div>
 <div class="card"><h2>Joueurs présents</h2><p class="note" style="margin:0">Touchez un joueur pour faire défiler ses équipes : présent, ${tm.map(t=>TM[t]).join(', ')}, puis absent. Vous pouvez modifier les équipes manuellement après la génération. Ou touchez 🎲 pour des équipes équilibrées.</p>
-<div class="pl">${PL.map((p,i)=>{const t=as[p];return `<button class="pc${!t?' absent':t==='P'?' pr':' on t-'+t}" data-pi="${i}">${esc(p)}${!t?'<small>absent</small>':t==='P'?'<small>présent</small>':`<small>${TM[t]}</small>`}</button>`}).join('')||`<span class="note">${isAdmin()?'Aucun joueur : ajoutez-en dans l\'onglet Joueurs.':'Aucun joueur : demandez à un admin d\'en ajouter.'}</span>`}</div>
+<div class="pl">${ordered.map(({p,i})=>{const t=as[p];return `<button class="pc${!t?' absent':t==='P'?' pr':' on t-'+t}" data-pi="${i}">${esc(p)}${!t?'<small>absent</small>':t==='P'?'<small>présent</small>':`<small>${TM[t]}</small>`}</button>`}).join('')||`<span class="note">${isAdmin()?'Aucun joueur : ajoutez-en dans l\'onglet Joueurs.':'Aucun joueur : demandez à un admin d\'en ajouter.'}</span>`}</div>
 <div class="set"><button id="gen"${pres<tm.length?' disabled':''}>🎲 Générer les équipes</button><button class="sm" id="toggle-pres">${pres===PL.length&&PL.length?'Tous absents':'Tous présents'}</button></div>
-${tm.map(t=>{const n=PL.filter(p=>as[p]===t);return `<div class="ro t-${t}"><b>${TM[t]}</b> (${n.length}) ${n.map(esc).join(', ')}</div>`}).join('')}</div>
+${tm.map(t=>{const n=PL.filter(p=>as[p]===t).sort((a,b)=>a.localeCompare(b,'fr',{sensitivity:'base'}));return `<div class="ro t-${t}"><b>${TM[t]}</b> (${n.length}) ${n.map(esc).join(', ')}</div>`}).join('')}</div>
 <button class="val" id="start">▶ Démarrer la session</button>`}
   if(h!==lastSetup){lastSetup=h;el.innerHTML=h}}
 function renderAdmin(){const el=$('#adm');if(!el)return;if(!isAdmin()){el.replaceChildren();return}let h='';
