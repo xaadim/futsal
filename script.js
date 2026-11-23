@@ -167,19 +167,18 @@ function renderAuth(){const el=$('#auth');if(ME){el.innerHTML='';return}
   if(!el.firstChild){el.innerHTML=`<div class="card empty" id="authwait">Vérification de l'installation…</div><div class="card" id="logincard" hidden><h2>Futsal Aytré</h2><p class="note" style="margin:0 0 12px">Entrez votre code d'activation personnel. Il n'est demandé qu'une seule fois sur ce téléphone.</p><div class="set"><input class="in" id="code" type="text" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="XXXXX-XXXXX" maxlength="14"><button id="login">Entrer</button></div><p class="note" id="autherr" role="alert"></p><p class="note">Pas de code ? Demandez-le à un admin du groupe.</p></div><div class="card" id="firstrun" hidden><h2>Première installation</h2><p class="note" style="margin:0 0 10px">Créez le compte administrateur. La clé d'installation est la valeur de SETUP_KEY dans Cloudflare.</p><div class="set"><input class="in" id="sk" type="password" placeholder="Clé d'installation" autocomplete="off"></div><div class="set"><input class="in" id="bn" type="text" maxlength="30" placeholder="Votre prénom"><button id="boot">Créer</button></div><p class="note" id="setuperr" role="alert"></p></div>`;
     api('setup').then(r=>{const w=$('#authwait'),l=$('#logincard'),f=$('#firstrun');if(w)w.hidden=true;if(l)l.hidden=!!r.needsAdmin;if(f)f.hidden=!r.needsAdmin}).catch(()=>{const w=$('#authwait');if(w)w.textContent='Vérification impossible. Rechargez la page pour réessayer.'})}}
 function renderWho(){const w=$('#who');if(w)w.innerHTML=ME?`<details class="account-menu"><summary>Connecté : <b>${esc(ME.name)}</b>${isAdmin()?' (admin)':''}</summary><div class="account-pop"><button id="renameMe">Changer mon nom</button><button id="myStats">Mes statistiques</button><button id="logout">Se déconnecter</button></div></details>`:''}
-function renderSetup(){const el=$('#setup');if(MODE!=='none')return;let h='';
+function renderSetup(){const el=$('#setup');if(MODE!=='none'||(DRAG&&DRAG.on))return;let h='';
   if(ME&&!LOADED)h='<div class="card empty">Connexion…</div>';
   else if(ME){const tm=S.setup.teams,as=S.setup.assign,pres=PL.filter(p=>as[p]).length;
-    const ordered=PL.map((p,i)=>({p,i})).sort((a,b)=>{
-      const rank=p=>as[p]==='P'?tm.length:as[p]?tm.indexOf(as[p]):tm.length+1;
-      return rank(a.p)-rank(b.p)||a.p.localeCompare(b.p,'fr',{sensitivity:'base'});
-    });
+    const all=PL.map((p,i)=>({p,i})).sort((a,b)=>a.p.localeCompare(b.p,'fr',{sensitivity:'base'}));
+    const chip=({p,i},t)=>`<button class="pc${!t?' absent':t==='P'?' pr':' on t-'+t}" data-pi="${i}">${esc(p)}</button>`;
+    const zone=(key,title,cls,list)=>`<div class="zone ${cls}" data-z="${key}"><h4>${title} <span>${list.length}</span></h4><div class="pl">${list.map(x=>chip(x,key)).join('')||'<span class="ph">Déposez des joueurs ici</span>'}</div></div>`;
+    const zones=zone('','Absents','z-absent',all.filter(x=>!as[x.p]))+zone('P','Présents, sans équipe','z-pres',all.filter(x=>as[x.p]==='P'))+tm.map(t=>zone(t,TM[t],'t-'+t,all.filter(x=>as[x.p]===t))).join('');
     h=`<div class="card"><h2>Nouvelle session</h2><p class="note" style="margin:0 0 10px">Aucune session en cours. Votre compte (${esc(ME.name)}) gérera le chrono et la validation des scores jusqu'à la fin des 12 matchs. Les autres suivent en direct.</p>
 <div class="set"><label>Équipes ce soir (2 ou 3)</label><span>${ALL.map(t=>`<button class="chip t-${t}${tm.includes(t)?' on':''}" data-tg="${t}">${TM[t]}</button>`).join(' ')}</span></div></div>
-<div class="card"><h2>Joueurs présents</h2><p class="note" style="margin:0">Touchez un joueur pour faire défiler ses équipes : présent, ${tm.map(t=>TM[t]).join(', ')}, puis absent. Vous pouvez modifier les équipes manuellement après la génération. Ou touchez 🎲 pour des équipes équilibrées.</p>
-<div class="pl">${ordered.map(({p,i})=>{const t=as[p];return `<button class="pc${!t?' absent':t==='P'?' pr':' on t-'+t}" data-pi="${i}">${esc(p)}${!t?'<small>absent</small>':t==='P'?'<small>présent</small>':`<small>${TM[t]}</small>`}</button>`}).join('')||`<span class="note">${isAdmin()?'Aucun joueur : ajoutez-en dans l\'onglet Joueurs.':'Aucun joueur : demandez à un admin d\'en ajouter.'}</span>`}</div>
+<div class="card"><h2>Joueurs présents</h2><p class="note" style="margin:0">Glissez-déposez chaque joueur dans une zone, ou touchez-le pour le faire défiler : présent, ${tm.map(t=>TM[t]).join(', ')}, puis absent. Vous pouvez corriger les équipes à la main après la génération. Ou touchez 🎲 pour des équipes équilibrées.</p>
 <div class="set"><button id="gen"${pres<tm.length?' disabled':''}>🎲 Générer les équipes</button><button class="sm" id="toggle-pres">${pres===PL.length&&PL.length?'Tous absents':'Tous présents'}</button></div>
-${tm.map(t=>{const n=PL.filter(p=>as[p]===t).sort((a,b)=>a.localeCompare(b,'fr',{sensitivity:'base'}));return `<div class="ro t-${t}"><b>${TM[t]}</b> (${n.length}) ${n.map(esc).join(', ')}</div>`}).join('')}</div>
+<div class="zones">${zones}</div>${PL.length?'':`<span class="note">${isAdmin()?'Aucun joueur : ajoutez-en dans l\'onglet Joueurs.':'Aucun joueur : demandez à un admin d\'en ajouter.'}</span>`}</div>
 <button class="val" id="start">▶ Démarrer la session</button>`}
   if(h!==lastSetup){lastSetup=h;el.innerHTML=h}}
 function renderAdmin(){const el=$('#adm');if(!el)return;if(!isAdmin()){el.replaceChildren();return}let h='';
@@ -288,6 +287,34 @@ async function pull(force){if(busy||document.hidden)return;busy=true;
   catch(e){if(e.status===401){ME=null;S.me=null;S.cache=null;SESS=null;LOADED=false;save();refresh()}else if(pendingFailure)syncStatus();else $('#sync').textContent=e.status>=400&&e.status<500?'Synchronisation refusée (HTTP '+e.status+')':'Hors ligne, nouvel essai…'}
   busy=false}
 
+/* ---- glisser-déposer des joueurs (souris et tactile) ---- */
+let DRAG=null,DRAGEND=0;
+const zoneAt=(x,y)=>{const e=document.elementFromPoint(x,y);return e&&e.closest?e.closest('#setup .zone'):null};
+function dragStart(e){const d=DRAG,r=d.el.getBoundingClientRect(),g=d.el.cloneNode(true);
+  g.classList.add('ghost');g.removeAttribute('data-pi');g.style.width=r.width+'px';
+  g.style.transform=`translate(${e.clientX-r.width/2}px,${e.clientY-r.height/2}px)`;
+  document.body.appendChild(g);Object.assign(d,{ghost:g,w:r.width,h:r.height,on:true,z:null});
+  d.el.classList.add('dragging');document.body.classList.add('dnd');
+  try{d.el.setPointerCapture(d.id)}catch(err){}
+  d.timer=setInterval(()=>{if(d.y<90)scrollBy(0,-16);else if(d.y>innerHeight-90)scrollBy(0,16)},30)}
+function dragMove(e){const d=DRAG;d.x=e.clientX;d.y=e.clientY;
+  d.ghost.style.transform=`translate(${d.x-d.w/2}px,${d.y-d.h/2}px)`;
+  const z=zoneAt(d.x,d.y);if(z!==d.z){if(d.z)d.z.classList.remove('over');if(z)z.classList.add('over');d.z=z}}
+function dragEnd(cancel){const d=DRAG;DRAG=null;if(!d||!d.on)return;
+  clearInterval(d.timer);d.ghost.remove();d.el.classList.remove('dragging');document.body.classList.remove('dnd');
+  if(d.z)d.z.classList.remove('over');DRAGEND=Date.now();
+  const v=d.z&&d.z.dataset.z,p=PL[d.i],ok=v===''||v==='P'||S.setup.teams.includes(v);
+  if(cancel||!d.z||!p||!ok)return;
+  if(v==='')delete S.setup.assign[p];else S.setup.assign[p]=v;
+  navigator.vibrate&&navigator.vibrate(12);save();lastSetup='';renderSetup()}
+document.addEventListener('pointerdown',e=>{const c=e.target.closest&&e.target.closest('#setup .pc[data-pi]');
+  if(!c||(e.pointerType==='mouse'&&e.button!==0))return;
+  DRAG={el:c,i:+c.dataset.pi,id:e.pointerId,sx:e.clientX,sy:e.clientY,x:e.clientX,y:e.clientY,on:false}});
+document.addEventListener('pointermove',e=>{const d=DRAG;if(!d||e.pointerId!==d.id)return;
+  if(!d.on){if(Math.hypot(e.clientX-d.sx,e.clientY-d.sy)<8)return;dragStart(e)}dragMove(e)});
+document.addEventListener('pointerup',e=>{if(DRAG&&e.pointerId===DRAG.id)dragEnd(false)});
+document.addEventListener('pointercancel',e=>{if(DRAG&&e.pointerId===DRAG.id)dragEnd(true)});
+
 /* ---- événements ---- */
 document.addEventListener('click',e=>{if(e.target.id==='pick'){closePick();return}const b=e.target.closest('button');if(!b)return;const d=b.dataset;
   if(d.sessionView){document.querySelectorAll('.session-view').forEach(v=>v.hidden=v.id!=='session-'+d.sessionView);
@@ -304,7 +331,7 @@ document.addEventListener('click',e=>{if(e.target.id==='pick'){closePick();retur
     else if(L.length>=3){toast('Maximum 3 équipes ce soir');return}
     else S.setup.teams=ALL.filter(x=>x===t||L.includes(x));
     save();renderSetup()}
-  else if(d.pi!==undefined){const p=PL[+d.pi],as=S.setup.assign,teams=S.setup.teams,current=as[p];
+  else if(d.pi!==undefined){if(Date.now()-DRAGEND<400)return;const p=PL[+d.pi],as=S.setup.assign,teams=S.setup.teams,current=as[p];
     if(!current)as[p]='P';else if(current==='P')as[p]=teams[0];else{const next=teams.indexOf(current)+1;if(next<teams.length)as[p]=teams[next];else delete as[p]}
     save();lastSetup='';renderSetup()}
   else if(b.id==='toggle-pres'){const as=S.setup.assign,allPresent=PL.length>0&&PL.every(p=>!!as[p]);

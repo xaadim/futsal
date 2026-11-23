@@ -256,3 +256,16 @@ nav button{padding:8px 2px;font-size:12px}
 	.session-switch button.on{background:color-mix(in srgb,var(--ac) 12%,var(--card));color:var(--tx);border-color:var(--ac);box-shadow:0 0 0 1px color-mix(in srgb,var(--ac) 22%,transparent)}
 }
 nav button span{font-size:20px}
+
+/* glisser-déposer des joueurs */
+.zone{border:2px dashed var(--bd);border-radius:14px;padding:4px 10px 0;margin:10px 0;background:var(--bg)}
+.zone[class*=" t-"]{border-color:var(--tc);border-left-width:6px}
+.zone h4{margin:8px 0 0;font:700 15px system-ui,sans-serif}
+.zone h4 span{color:var(--mu);font-weight:600}
+.zone .pl{margin:8px 0;min-height:44px;align-items:center}
+.zone .ph{color:var(--mu);font-size:13px}
+.zone.over{border-style:solid;border-color:var(--ac);background:color-mix(in srgb,var(--ac) 14%,var(--bg))}
+#setup .pc{touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:grab}
+.pc.dragging{opacity:.3}
+.pc.ghost{position:fixed;left:0;top:0;z-index:60;pointer-events:none;box-shadow:0 10px 26px rgba(0,0,0,.35)}
+body.dnd{user-select:none;-webkit-user-select:none;cursor:grabbing}
