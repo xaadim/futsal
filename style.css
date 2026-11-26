@@ -84,7 +84,7 @@ td.rk{width:28px;text-align:left;color:var(--mu);font-weight:700}
 td.pt{font:800 30px var(--f)}
 tr:first-child td{border-top:0}
 .note{color:var(--mu);font-size:13px;margin:8px 2px 0}
-.h{display:grid;grid-template-columns:28px 1fr auto 1fr 56px;gap:6px;align-items:center;padding:12px 0;border-top:1px solid var(--bd)}
+.h{display:grid;grid-template-columns:28px 1fr auto 1fr auto;gap:6px;align-items:center;padding:12px 0;border-top:1px solid var(--bd)}
 .h:first-child{border-top:0}
 .h .no{color:var(--mu);font-size:13px}
 .h .tm{font-weight:700;display:flex;align-items:center}
@@ -269,3 +269,26 @@ nav button span{font-size:20px}
 .pc.dragging{opacity:.3}
 .pc.ghost{position:fixed;left:0;top:0;z-index:60;pointer-events:none;box-shadow:0 10px 26px rgba(0,0,0,.35)}
 body.dnd{user-select:none;-webkit-user-select:none;cursor:grabbing}
+
+/* ajout rapide autour d'un joueur */
+#quick{position:fixed;inset:0;z-index:55;background:rgba(0,0,0,.3)}
+#quick[hidden]{display:none}
+.qname{position:absolute;transform:translate(-50%,-50%);background:var(--card);color:var(--tx);padding:8px 16px;border-radius:999px;font-weight:700;box-shadow:0 4px 18px rgba(0,0,0,.35);white-space:nowrap}
+.qb{position:absolute;width:68px;height:68px;margin:-34px 0 0 -34px;border-radius:50%;padding:0;background:var(--tc);color:var(--tt);font:800 15px/1.1 var(--f);box-shadow:0 4px 16px rgba(0,0,0,.35);animation:qpop .14s ease-out}
+.qb.x{background:var(--card);color:var(--danger);font-size:24px}
+.qb.cur{outline:4px solid var(--tx)}
+@keyframes qpop{from{transform:scale(.4);opacity:0}}
+@media(prefers-reduced-motion:reduce){.qb{animation:none}}
+/* correction d'un match */
+#edit{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:30;display:flex;align-items:flex-end}
+#edit[hidden]{display:none}
+#edit .sheet{max-height:92vh;overflow:auto}
+.eg{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+.ecol{border-top:6px solid var(--tc);background:var(--bg);border-radius:12px;padding:10px}
+.ecol>b{font:800 22px var(--f)}
+.stp{display:flex;align-items:center;justify-content:center;gap:8px;margin:6px 0}
+.stp button{width:44px;height:44px;font-size:24px;padding:0}
+.stp .n{font:800 46px var(--f);min-width:46px;text-align:center}
+.ecol .sel{width:100%;margin:4px 0;min-width:0}
+.erow{display:flex;gap:6px;align-items:center}
+.ha{display:flex;gap:4px}

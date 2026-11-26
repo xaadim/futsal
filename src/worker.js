@@ -1,4 +1,5 @@
 import { balance } from './balance.js';
+import { normalizeMatchEdit } from './matchEdit.js';
 import { buildImport, fetchSupabase } from './import.js';
 import { dateInParis, mondayOnOrAfter, nextLaundryDate } from './laundry.js';
 
@@ -281,6 +282,22 @@ async function route(req, env, u, p) {
       if (sql) await DB.exec(sql);
       await DB.batch([q("UPDATE app_settings SET value = '1' WHERE name = 'supabase_imported'"), bump()]);
       return J({ codes, stats });
+    }
+    // Correction d'un match déjà validé (score et buteurs), même si la session est terminée
+    if (r === 'matches' && m === 'PATCH') {
+      if (!admin) return bad(403, 'admin');
+      const id = +p[2];
+      const row = await q('SELECT id, a, b FROM matches WHERE id = ?', id).first();
+      if (!row) return bad(404, 'match');
+      const v = normalizeMatchEdit(row, await body());
+      if (v.error) return bad(400, v.error);
+      await DB.batch([
+        q('UPDATE matches SET sa = ?, sb = ? WHERE id = ?', v.sa, v.sb, id),
+        q('DELETE FROM goals WHERE match_id = ?', id),
+        ...v.goals.map((g) => q('INSERT INTO goals (match_id, team, player, own_goal) VALUES (?, ?, ?, ?)', id, g.team, g.p, g.og)),
+        bump(),
+      ]);
+      return J({ ok: 1 });
     }
     if (r === 'matches' && m === 'DELETE') {
       if (!admin) return bad(403, 'admin');

@@ -93,6 +93,7 @@ function setMode(){TEAMS=SESS&&SESS.teams?ALL.filter(t=>SESS.teams[t]):S.setup.t
   const ta=$('#tabAdmin');if(ta)ta.hidden=!isAdmin();
   const pa=$('#p-admin');if(pa&&!isAdmin()){const leavingAdmin=!pa.hidden;pa.hidden=true;if(leavingAdmin){$('#p-session').hidden=false;document.querySelectorAll('nav button').forEach(n=>n.classList.toggle('on',n.dataset.tab==='session'))}}
   if(MODE!=='host')closePick();
+  if(MODE!=='none')closeQuick();
   if(MODE==='host')fix()}
 function syncHostLive(){if(MODE!=='host'||!SESS||!SESS.live)return;const l=SESS.live,key=SESS.id+':'+JSON.stringify(l);if(key===hostLiveKey)return;hostLiveKey=key;
   const local={a:S.cur.a,b:S.cur.b,sa:S.cur.sa,sb:S.cur.sb,g:S.cur.goals,dur:S.dur,run:T.run,end:T.run?T.end:0,rem:T.run?0:Math.round(T.rem*10)/10,half:T.half,done:T.done,started:T.started};
@@ -176,7 +177,7 @@ function renderSetup(){const el=$('#setup');if(MODE!=='none'||(DRAG&&DRAG.on))re
     const zones=zone('','Absents','z-absent',all.filter(x=>!as[x.p]))+zone('P','Présents, sans équipe','z-pres',all.filter(x=>as[x.p]==='P'))+tm.map(t=>zone(t,TM[t],'t-'+t,all.filter(x=>as[x.p]===t))).join('');
     h=`<div class="card"><h2>Nouvelle session</h2><p class="note" style="margin:0 0 10px">Aucune session en cours. Votre compte (${esc(ME.name)}) gérera le chrono et la validation des scores jusqu'à la fin des 12 matchs. Les autres suivent en direct.</p>
 <div class="set"><label>Équipes ce soir (2 ou 3)</label><span>${ALL.map(t=>`<button class="chip t-${t}${tm.includes(t)?' on':''}" data-tg="${t}">${TM[t]}</button>`).join(' ')}</span></div></div>
-<div class="card"><h2>Joueurs présents</h2><p class="note" style="margin:0">Glissez-déposez chaque joueur dans une zone, ou touchez-le pour le faire défiler : présent, ${tm.map(t=>TM[t]).join(', ')}, puis absent. Vous pouvez corriger les équipes à la main après la génération. Ou touchez 🎲 pour des équipes équilibrées.</p>
+<div class="card"><h2>Joueurs présents</h2><p class="note" style="margin:0">Glissez-déposez chaque joueur dans une zone, touchez-le deux fois pour choisir son équipe d'un geste, ou une fois pour le faire défiler : présent, ${tm.map(t=>TM[t]).join(', ')}, puis absent. Vous pouvez corriger les équipes à la main après la génération. Ou touchez 🎲 pour des équipes équilibrées.</p>
 <div class="set"><button id="gen"${pres<tm.length?' disabled':''}>🎲 Générer les équipes</button><button class="sm" id="toggle-pres">${pres===PL.length&&PL.length?'Tous absents':'Tous présents'}</button></div>
 <div class="zones">${zones}</div>${PL.length?'':`<span class="note">${isAdmin()?'Aucun joueur : ajoutez-en dans l\'onglet Joueurs.':'Aucun joueur : demandez à un admin d\'en ajouter.'}</span>`}</div>
 <button class="val" id="start">▶ Démarrer la session</button>`}
@@ -201,9 +202,12 @@ function renderRank(){const games=M.filter(m=>dt(m)===today()),live=liveState();
   const L=calc(games,ALL).filter(x=>x.j);
   const liveTeams=SESS&&live.started?[live.a,live.b]:[];
   $('#tb').innerHTML=L.length?'<tr><th></th><th>Équipe</th><th>J</th><th>Diff</th><th>Pts</th></tr>'+L.map((x,i)=>{const playing=liveTeams.includes(x.t);return `<tr class="t-${x.t}${playing?' live-team':''}"><td class="rk">${i+1}${playing?'<span class="live-indicator" aria-label="Match en cours"></span>':''}</td><td><i class="dot"></i>${TM[x.t]}</td><td>${x.j}</td><td>${sg(x.d)}</td><td class="pt">${x.p}</td></tr>`}).join(''):'<tr><td class="empty">Aucun match aujourd\'hui.</td></tr>'}
-function renderHist(){const H=$('#hist'),E=M.map((m,i)=>[m,i]).filter(([m])=>dt(m)===today());
-  if(!E.length){H.innerHTML='<div class="empty">Aucun match aujourd\'hui.<br>Validez un match pour le voir ici.</div>';return}
-  H.innerHTML=E.map(([m,i],k)=>`<div class="h"><span class="no">${k+1}</span><span class="tm t-${m.a}"><i class="dot"></i>${TM[m.a]}</span><span class="sc">${m.sa} – ${m.sb}</span><span class="tm t-${m.b}"><i class="dot"></i>${TM[m.b]}</span>${isAdmin()&&m.id?`<button data-del="${i}" aria-label="Supprimer le match ${k+1}">✕</button>`:'<span></span>'}${gtxt(m)}</div>`).reverse().join('')}
+function renderHist(){const H=$('#hist'),dates=[...new Set(M.map(dt))].sort().reverse();
+  if(!dates.length){H.innerHTML='<div class="empty">Aucun match pour l\'instant.<br>Validez un match pour le voir ici.</div>';return}
+  if(!HD||!dates.includes(HD))HD=dates.includes(today())?today():dates[0];
+  const E=M.map((m,i)=>[m,i]).filter(([m])=>dt(m)===HD),adm=isAdmin(),fd=d=>new Date(d+'T12:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  H.innerHTML=`<div class="set" style="margin:0 0 6px"><select class="sel" id="hd" aria-label="Soirée">${dates.map(d=>`<option value="${d}"${d===HD?' selected':''}>${fd(d)}${d===today()?' (aujourd\'hui)':''}</option>`).join('')}</select></div>`+
+    E.map(([m,i],k)=>`<div class="h"><span class="no">${k+1}</span><span class="tm t-${m.a}"><i class="dot"></i>${TM[m.a]}</span><span class="sc">${m.sa} – ${m.sb}</span><span class="tm t-${m.b}"><i class="dot"></i>${TM[m.b]}</span>${adm&&m.id?`<span class="ha"><button data-edit="${i}" aria-label="Corriger le match ${k+1}">✎</button><button data-del="${i}" aria-label="Supprimer le match ${k+1}">✕</button></span>`:'<span></span>'}${gtxt(m)}</div>`).reverse().join('')}
 const gtxt=m=>{const G=m.goals||[];if(!G.length)return '';const f=t=>gcount(G.filter(g=>g.team===t).map(g=>g.og?'csc':(g.p||'?')));return `<span class="gs">⚽ ${esc(f(m.a)||'–')} · ${esc(f(m.b)||'–')}</span>`};
 function pstats(L){const SM=Object.fromEntries(SA.map(s=>[s.id,s])),r={},P=n=>r[n]||(r[n]={p:n,j:0,v:0,n:0,l:0,g:0});
   L.forEach(m=>{const s=SM[m.session_id];
@@ -287,10 +291,49 @@ async function pull(force){if(busy||document.hidden)return;busy=true;
   catch(e){if(e.status===401){ME=null;S.me=null;S.cache=null;SESS=null;LOADED=false;save();refresh()}else if(pendingFailure)syncStatus();else $('#sync').textContent=e.status>=400&&e.status<500?'Synchronisation refusée (HTTP '+e.status+')':'Hors ligne, nouvel essai…'}
   busy=false}
 
+/* ---- ajout rapide : double appui sur un joueur ---- */
+function cycle(i){const p=PL[i],as=S.setup.assign,teams=S.setup.teams,current=as[p];if(!p)return;
+  if(!current)as[p]='P';else if(current==='P')as[p]=teams[0];else{const next=teams.indexOf(current)+1;if(next<teams.length)as[p]=teams[next];else delete as[p]}
+  save();lastSetup='';renderSetup()}
+function closeQuick(){const q=$('#quick');if(q){q.hidden=true;q.innerHTML=''}QI=-1}
+function openQuick(i,el){const p=PL[i],q=$('#quick');if(!p||!q)return;QI=i;
+  const as=S.setup.assign,tm=S.setup.teams,r=el.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,W=innerWidth,H=innerHeight,R=86;
+  const items=[...tm.map(t=>({v:t,l:TM[t],c:'t-'+t,a:TM[t]})),{v:'',l:'✕',c:'x',a:'Absent'}];
+  q.innerHTML=`<div class="qname" style="left:${cx}px;top:${cy}px">${esc(p)}</div>`+items.map((it,k)=>{const a=-Math.PI/2+k*2*Math.PI/items.length,x=Math.min(W-38,Math.max(38,cx+R*Math.cos(a))),y=Math.min(H-38,Math.max(38,cy+R*Math.sin(a)));
+    return `<button class="qb ${it.c}${(as[p]||'')===it.v?' cur':''}" data-q="${it.v}" style="left:${x}px;top:${y}px" aria-label="${it.a}">${it.l}</button>`}).join('');
+  q.hidden=false}
+function quickPick(v){const p=PL[QI],as=S.setup.assign;if(!p)return;
+  if(v==='')delete as[p];else if(S.setup.teams.includes(v))as[p]=v;else return;
+  closeQuick();save();lastSetup='';renderSetup()}
+
+/* ---- correction d'un match validé (admins) ---- */
+function closeEdit(){EDIT=null;const el=$('#edit');if(el){el.hidden=true;el.innerHTML=''}}
+function openEdit(i){const m=M[i];if(!m||!m.id||!isAdmin())return;
+  const s=SA.find(x=>x.id===m.session_id),ros=t=>((s&&s.teams&&s.teams[t])||[]),G=m.goals||[],gl=t=>G.filter(g=>g.team===t).map(g=>({p:g.og?'':(g.p||''),og:g.og?1:0}));
+  EDIT={id:m.id,a:m.a,b:m.b,sa:m.sa,sb:m.sb,ra:ros(m.a),rb:ros(m.b),ga:gl(m.a),gb:gl(m.b)};
+  EDIT.ga.length=Math.min(EDIT.ga.length,EDIT.sa);EDIT.gb.length=Math.min(EDIT.gb.length,EDIT.sb);
+  renderEdit()}
+function renderEdit(){const e=EDIT,el=$('#edit');if(!e||!el)return;
+  const col=k=>{const t=e[k],sc=e['s'+k],G=e['g'+k],ro=e['r'+k];
+    const opts=cur=>{const extra=cur&&!cur.startsWith('__')&&!ro.includes(cur)?[cur]:[];
+      return [...ro,...extra].map(n=>`<option value="${esc(n)}"${n===cur?' selected':''}>${esc(n)}</option>`).join('')+`<option value="__csc"${cur==='__csc'?' selected':''}>Contre son camp</option><option value="__x"${cur==='__x'?' selected':''}>Inconnu</option>`};
+    const rows=G.map((g,ix)=>{const cur=g.og?'__csc':(g.p||'__x');return `<div class="erow"><select class="sel" data-eg="${k}" data-ix="${ix}" aria-label="Buteur ${ix+1}">${opts(cur)}</select><button class="sm" data-egx="${k}" data-ix="${ix}" aria-label="Retirer ce buteur">✕</button></div>`}).join('');
+    return `<div class="ecol t-${t}"><b>${TM[t]}</b><div class="stp"><button data-es="${k}" data-d="-1" aria-label="Moins un but">−</button><span class="n">${sc}</span><button data-es="${k}" data-d="1" aria-label="Plus un but">+</button></div>${rows}<button class="sm" data-ega="${k}"${G.length>=sc?' disabled':''}>+ Buteur</button></div>`};
+  el.innerHTML=`<div class="sheet"><h3>Corriger le match</h3><p class="note" style="margin:0">Statistiques, classements et saison sont recalculés. Un buteur par but au maximum : les buts sans buteur restent « inconnus ».</p><div class="eg">${col('a')}${col('b')}</div><div class="set"><button id="esave">Enregistrer</button><button class="sm" id="ecancel">Annuler</button></div></div>`;
+  el.hidden=false}
+function editStep(k,d){const e=EDIT;if(!e)return;e['s'+k]=Math.max(0,Math.min(99,e['s'+k]+d));if(e['g'+k].length>e['s'+k])e['g'+k].length=e['s'+k];renderEdit()}
+function editAdd(k){const e=EDIT;if(e&&e['g'+k].length<e['s'+k]){e['g'+k].push({p:'',og:0});renderEdit()}}
+function editRemove(k,ix){if(EDIT){EDIT['g'+k].splice(ix,1);renderEdit()}}
+function editSet(k,ix,v){const g=EDIT&&EDIT['g'+k][ix];if(!g)return;if(v==='__csc'){g.p='';g.og=1}else if(v==='__x'){g.p='';g.og=0}else{g.p=v;g.og=0}}
+function saveEdit(){const e=EDIT;if(!e)return;
+  const goals=[...e.ga.map(g=>({team:e.a,p:g.p,og:g.og})),...e.gb.map(g=>({team:e.b,p:g.p,og:g.og}))];
+  patch('matches/'+e.id,{sa:e.sa,sb:e.sb,goals}).then(()=>{closeEdit();pull(true);toast('Match corrigé')}).catch(()=>toast('Correction impossible'))}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeQuick();closeEdit();closePick()}});
+
 /* ---- glisser-déposer des joueurs (souris et tactile) ---- */
-let DRAG=null,DRAGEND=0;
+let DRAG=null,DRAGEND=0,TAP={},QI=-1,EDIT=null,HD=null;
 const zoneAt=(x,y)=>{const e=document.elementFromPoint(x,y);return e&&e.closest?e.closest('#setup .zone'):null};
-function dragStart(e){const d=DRAG,r=d.el.getBoundingClientRect(),g=d.el.cloneNode(true);
+function dragStart(e){clearTimeout(TAP.h);TAP={};const d=DRAG,r=d.el.getBoundingClientRect(),g=d.el.cloneNode(true);
   g.classList.add('ghost');g.removeAttribute('data-pi');g.style.width=r.width+'px';
   g.style.transform=`translate(${e.clientX-r.width/2}px,${e.clientY-r.height/2}px)`;
   document.body.appendChild(g);Object.assign(d,{ghost:g,w:r.width,h:r.height,on:true,z:null});
@@ -316,7 +359,7 @@ document.addEventListener('pointerup',e=>{if(DRAG&&e.pointerId===DRAG.id)dragEnd
 document.addEventListener('pointercancel',e=>{if(DRAG&&e.pointerId===DRAG.id)dragEnd(true)});
 
 /* ---- événements ---- */
-document.addEventListener('click',e=>{if(e.target.id==='pick'){closePick();return}const b=e.target.closest('button');if(!b)return;const d=b.dataset;
+document.addEventListener('click',e=>{if(e.target.id==='pick'){closePick();return}if(e.target.id==='quick'||(e.target.classList&&e.target.classList.contains('qname'))){closeQuick();return}if(e.target.id==='edit'){closeEdit();return}const b=e.target.closest('button');if(!b)return;const d=b.dataset;
   if(d.sessionView){document.querySelectorAll('.session-view').forEach(v=>v.hidden=v.id!=='session-'+d.sessionView);
     document.querySelectorAll('[data-session-view]').forEach(t=>{const active=t.dataset.sessionView===d.sessionView;t.classList.toggle('on',active);t.setAttribute('aria-pressed',String(active))});scrollTo(0,0)}
   else if(d.tab){if(d.tab==='admin'&&!isAdmin())return;const pane=d.tab==='session'?'p-session':'p-'+d.tab;
@@ -331,9 +374,17 @@ document.addEventListener('click',e=>{if(e.target.id==='pick'){closePick();retur
     else if(L.length>=3){toast('Maximum 3 équipes ce soir');return}
     else S.setup.teams=ALL.filter(x=>x===t||L.includes(x));
     save();renderSetup()}
-  else if(d.pi!==undefined){if(Date.now()-DRAGEND<400)return;const p=PL[+d.pi],as=S.setup.assign,teams=S.setup.teams,current=as[p];
-    if(!current)as[p]='P';else if(current==='P')as[p]=teams[0];else{const next=teams.indexOf(current)+1;if(next<teams.length)as[p]=teams[next];else delete as[p]}
-    save();lastSetup='';renderSetup()}
+  else if(d.pi!==undefined){if(Date.now()-DRAGEND<400)return;const i=+d.pi;
+    if(TAP.i===i&&Date.now()-TAP.t<350){clearTimeout(TAP.h);TAP={};openQuick(i,b);return}
+    if(TAP.h){clearTimeout(TAP.h);cycle(TAP.i);TAP={}}
+    TAP={i,t:Date.now(),h:setTimeout(()=>{TAP={};cycle(i)},330)}}
+  else if(d.q!==undefined)quickPick(d.q);
+  else if(d.edit!==undefined)openEdit(+d.edit);
+  else if(d.es)editStep(d.es,+d.d);
+  else if(d.egx)editRemove(d.egx,+d.ix);
+  else if(d.ega)editAdd(d.ega);
+  else if(b.id==='esave')saveEdit();
+  else if(b.id==='ecancel')closeEdit();
   else if(b.id==='toggle-pres'){const as=S.setup.assign,allPresent=PL.length>0&&PL.every(p=>!!as[p]);
     PL.forEach(p=>{if(allPresent)delete as[p];else if(!as[p])as[p]='P'});save();lastSetup='';renderSetup()}
   else if(d.del!==undefined)two(b,()=>{const m=M[+d.del];if(m&&m.id)api('matches/'+m.id,{method:'DELETE'}).then(()=>pull(true)).catch(()=>toast('Suppression impossible'))},'Sûr ?');
@@ -370,6 +421,8 @@ document.addEventListener('click',e=>{if(e.target.id==='pick'){closePick();retur
   else if(b.id==='hidecode'){NEWCODE=null;lastAdm='';renderAdmin()}});
 document.addEventListener('change',e=>{const el=e.target,s=el.dataset.sel;
   if(el.id==='yr'){YR=el.value;renderSeason();renderMe()}
+  else if(el.id==='hd'){HD=el.value;renderHist()}
+  else if(el.dataset.eg)editSet(el.dataset.eg,+el.dataset.ix,el.value)
   else if(el.id==='sessionSelect')renderSessionRank(M.filter(m=>dt(m).startsWith(YR)));
   else if(el.dataset.lv){LEVEL_CHANGES[el.dataset.lv]=+el.value;lastAdm='';renderAdmin()}
   else if(s&&MODE==='host'){const o=s==='a'?'b':'a';if(el.value===S.cur[o])S.cur[o]=S.cur[s];S.cur[s]=el.value;S.cur.goals.forEach(g=>{g.p=''});ch()}
