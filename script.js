@@ -259,8 +259,11 @@ function renderSessionRank(L){const sessions=SA.filter(s=>String(s.date||'').sta
   let remove=$('#deleteSession');if(isAdmin()&&sessions.length){if(!remove){remove=document.createElement('button');remove.id='deleteSession';remove.className='sm';remove.textContent='🗑 Supprimer cette session';select.insertAdjacentElement('afterend',remove)}}else remove?.remove();
   if(!sessions.length){out.innerHTML='<div class="empty">Aucune session cette saison.</div>';return}
   const selected=sessions.find(s=>String(s.id)===previous)||sessions[0];select.value=selected.id;
-  const matches=L.filter(m=>m.session_id===selected.id),rows=calc(matches,ALL).filter(x=>x.j);
-  out.innerHTML=rows.length?'<table class="cp"><tr><th></th><th>Équipe</th><th>J</th><th>V-N-D</th><th>Diff</th><th>Pts</th></tr>'+rows.map((x,i)=>`<tr class="t-${x.t}"><td class="rk">${i+1}</td><td><i class="dot"></i>${TM[x.t]}</td><td>${x.j}</td><td>${x.v}-${x.n}-${x.l}</td><td>${sg(x.d)}</td><td class="pt">${x.p}</td></tr>`).join('')+'</table>':'<div class="empty">Aucun match enregistré pour cette session.</div>'}
+  const matches=L.filter(m=>m.session_id===selected.id),rows=calc(matches,ALL).filter(x=>x.j),adm=isAdmin();
+  const table=rows.length?'<table class="cp"><tr><th></th><th>Équipe</th><th>J</th><th>V-N-D</th><th>Diff</th><th>Pts</th></tr>'+rows.map((x,i)=>`<tr class="t-${x.t}"><td class="rk">${i+1}</td><td><i class="dot"></i>${TM[x.t]}</td><td>${x.j}</td><td>${x.v}-${x.n}-${x.l}</td><td>${sg(x.d)}</td><td class="pt">${x.p}</td></tr>`).join('')+'</table>':'<div class="empty">Aucun match enregistré pour cette session.</div>';
+  const sessionMatches=M.map((m,i)=>[m,i]).filter(([m])=>m.session_id===selected.id);
+  const matchList=sessionMatches.length?`<div class="session-matches"><h3>Matchs de la session (${sessionMatches.length})</h3>${adm?'<p class="note" style="margin:0 0 8px">Touchez ✎ pour corriger le score ou les buteurs : les classements sont recalculés automatiquement.</p>':''}${sessionMatches.map(([m,i],k)=>`<div class="h"><span class="no">${k+1}</span><span class="tm t-${m.a}"><i class="dot"></i>${TM[m.a]}</span><span class="sc">${m.sa} – ${m.sb}</span><span class="tm t-${m.b}"><i class="dot"></i>${TM[m.b]}</span>${adm&&m.id?`<span class="ha"><button data-edit="${i}" aria-label="Corriger le match ${k+1}">✎</button><button data-del="${i}" aria-label="Supprimer le match ${k+1}">✕</button></span>`:'<span></span>'}${gtxt(m)}</div>`).reverse().join('')}</div>`:'';
+  out.innerHTML=table+matchList}
 
 /* ---- API ---- */
 const api=(p,o={})=>fetch('/api/'+p,{credentials:'same-origin',...o,headers:{'Content-Type':'application/json'}}).then(async r=>{const t=await r.text();let b=null;try{b=t?JSON.parse(t):null}catch(e){}if(!r.ok){const e=new Error(r.status);e.status=r.status;e.body=b;throw e}return b});
@@ -297,19 +300,19 @@ function cycle(i){const p=PL[i],as=S.setup.assign,teams=S.setup.teams,current=as
   save();lastSetup='';renderSetup()}
 function closeQuick(){const q=$('#quick');if(q){q.hidden=true;q.innerHTML=''}QI=-1}
 function openQuick(i,el){const p=PL[i],q=$('#quick');if(!p||!q)return;QI=i;
-  const as=S.setup.assign,tm=S.setup.teams,r=el.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,W=innerWidth,H=innerHeight,R=86;
-  const items=[...tm.map(t=>({v:t,l:TM[t],c:'t-'+t,a:TM[t]})),{v:'',l:'✕',c:'x',a:'Absent'}];
+  const as=S.setup.assign,tm=S.setup.teams,r=el.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,W=innerWidth,H=innerHeight,R=92;
+  const items=[...tm.map(t=>({v:t,l:TM[t],c:'t-'+t,a:TM[t]})),{v:'P',l:'Présent',c:'pr',a:'Présent, sans équipe'},{v:'',l:'✕',c:'x',a:'Absent'}];
   q.innerHTML=`<div class="qname" style="left:${cx}px;top:${cy}px">${esc(p)}</div>`+items.map((it,k)=>{const a=-Math.PI/2+k*2*Math.PI/items.length,x=Math.min(W-38,Math.max(38,cx+R*Math.cos(a))),y=Math.min(H-38,Math.max(38,cy+R*Math.sin(a)));
     return `<button class="qb ${it.c}${(as[p]||'')===it.v?' cur':''}" data-q="${it.v}" style="left:${x}px;top:${y}px" aria-label="${it.a}">${it.l}</button>`}).join('');
   q.hidden=false}
 function quickPick(v){const p=PL[QI],as=S.setup.assign;if(!p)return;
-  if(v==='')delete as[p];else if(S.setup.teams.includes(v))as[p]=v;else return;
+  if(v==='')delete as[p];else if(v==='P'||S.setup.teams.includes(v))as[p]=v;else return;
   closeQuick();save();lastSetup='';renderSetup()}
 
 /* ---- correction d'un match validé (admins) ---- */
 function closeEdit(){EDIT=null;const el=$('#edit');if(el){el.hidden=true;el.innerHTML=''}}
 function openEdit(i){const m=M[i];if(!m||!m.id||!isAdmin())return;
-  const s=SA.find(x=>x.id===m.session_id),ros=t=>((s&&s.teams&&s.teams[t])||[]),G=m.goals||[],gl=t=>G.filter(g=>g.team===t).map(g=>({p:g.og?'':(g.p||''),og:g.og?1:0}));
+  const s=SA.find(x=>x.id===m.session_id),ros=t=>{const list=(s&&s.teams&&s.teams[t])||[];return list.length?list:PL},G=m.goals||[],gl=t=>G.filter(g=>g.team===t).map(g=>({p:g.og?'':(g.p||''),og:g.og?1:0}));
   EDIT={id:m.id,a:m.a,b:m.b,sa:m.sa,sb:m.sb,ra:ros(m.a),rb:ros(m.b),ga:gl(m.a),gb:gl(m.b)};
   EDIT.ga.length=Math.min(EDIT.ga.length,EDIT.sa);EDIT.gb.length=Math.min(EDIT.gb.length,EDIT.sb);
   renderEdit()}
@@ -327,7 +330,7 @@ function editRemove(k,ix){if(EDIT){EDIT['g'+k].splice(ix,1);renderEdit()}}
 function editSet(k,ix,v){const g=EDIT&&EDIT['g'+k][ix];if(!g)return;if(v==='__csc'){g.p='';g.og=1}else if(v==='__x'){g.p='';g.og=0}else{g.p=v;g.og=0}}
 function saveEdit(){const e=EDIT;if(!e)return;
   const goals=[...e.ga.map(g=>({team:e.a,p:g.p,og:g.og})),...e.gb.map(g=>({team:e.b,p:g.p,og:g.og}))];
-  patch('matches/'+e.id,{sa:e.sa,sb:e.sb,goals}).then(()=>{closeEdit();pull(true);toast('Match corrigé')}).catch(()=>toast('Correction impossible'))}
+  patch('matches/'+e.id,{sa:e.sa,sb:e.sb,goals}).then(()=>{closeEdit();pull(true);toast('Match corrigé · classements mis à jour')}).catch(()=>toast('Correction impossible'))}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeQuick();closeEdit();closePick()}});
 
 /* ---- glisser-déposer des joueurs (souris et tactile) ---- */
