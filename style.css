@@ -292,3 +292,89 @@ body.dnd{user-select:none;-webkit-user-select:none;cursor:grabbing}
 .ecol .sel{width:100%;margin:4px 0;min-width:0}
 .erow{display:flex;gap:6px;align-items:center}
 .ha{display:flex;gap:4px}
+
+/* Identité visuelle */
+:root{
+	--bg:#f2f6f0;
+	--card:#fff;
+	--tx:#17241b;
+	--mu:#68786c;
+	--bd:#dfe8de;
+	--ac:#16834a;
+	--act:#fff;
+}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){
+	--bg:#101914;
+	--card:#19251e;
+	--tx:#edf5ee;
+	--mu:#9aab9e;
+	--bd:#2b3a30;
+	--ac:#a8e063;
+	--act:#172314;
+}}
+:root[data-theme="dark"]{
+	--bg:#101914;
+	--card:#19251e;
+	--tx:#edf5ee;
+	--mu:#9aab9e;
+	--bd:#2b3a30;
+	--ac:#a8e063;
+	--act:#172314;
+}
+body{
+	background:
+		radial-gradient(ellipse at 92% 0%,color-mix(in srgb,var(--ac) 10%,transparent),transparent 30rem),
+		var(--bg);
+	background-attachment:fixed;
+}
+header{margin-bottom:18px}
+.brand{gap:11px}
+.brand .logo{
+	width:44px;
+	height:44px;
+	border-radius:15px;
+	background:color-mix(in srgb,var(--ac) 12%,var(--card));
+	font-size:28px;
+}
+h1{letter-spacing:-.02em}
+.card{
+	border-radius:22px;
+	box-shadow:0 6px 22px color-mix(in srgb,var(--tx) 6%,transparent);
+}
+#tc.card{
+	background:
+		radial-gradient(ellipse at 100% 0%,color-mix(in srgb,var(--ac) 11%,transparent),transparent 55%),
+		var(--card);
+}
+button{transition:transform .12s,background-color .16s,box-shadow .16s}
+button:focus-visible,select:focus-visible,input:focus-visible{
+	outline-color:var(--ac);
+}
+.go,.val{box-shadow:0 5px 14px color-mix(in srgb,var(--ac) 20%,transparent)}
+.session-switch,.session-switch#session-dock{
+	box-shadow:0 8px 24px color-mix(in srgb,var(--tx) 8%,transparent);
+}
+.session-switch button.on{
+	background:color-mix(in srgb,var(--ac) 14%,var(--card));
+	color:var(--tx);
+	border-color:color-mix(in srgb,var(--ac) 45%,var(--bd));
+	box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ac) 14%,transparent);
+}
+nav button.on{
+	color:var(--ac);
+	background:color-mix(in srgb,var(--ac) 11%,var(--card));
+	box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ac) 25%,transparent);
+}
+.side{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--tt) 12%,transparent)}
+.pc{border-radius:14px}
+.zone{border-radius:18px}
+.kp,.rkl div{border:1px solid var(--bd)}
+@media(hover:hover){
+	button:not(:disabled):hover{box-shadow:0 4px 14px color-mix(in srgb,var(--tx) 12%,transparent)}
+	.go:hover,.val:hover{filter:brightness(1.06)}
+}
+@media(max-width:560px){
+	header{margin-bottom:12px}
+	.brand .logo{width:38px;height:38px;font-size:25px;border-radius:13px}
+	.card{box-shadow:0 4px 16px color-mix(in srgb,var(--tx) 6%,transparent)}
+}
